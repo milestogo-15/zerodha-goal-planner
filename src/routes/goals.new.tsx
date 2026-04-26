@@ -53,21 +53,25 @@ function NewGoalPage() {
     }
   }, [years, presetTouched]);
 
-  const preset = presetById(presetId);
+  const preset = presetId ? presetById(presetId) : null;
   const allocation = useMemo(
-    () => preset.allocation(settings.largeCapFundId),
+    () => (preset ? preset.allocation(settings.largeCapFundId) : []),
     [preset, settings.largeCapFundId],
   );
-  const cagr = blendedCagr(allocation);
+  const cagr = allocation.length ? blendedCagr(allocation) : 0;
   const inflatedTarget = inflateTarget(targetAmount, years, inflationPct);
-  const reqSip = requiredSip(inflatedTarget, cagr, years * 12);
+  const reqSip = cagr > 0 ? requiredSip(inflatedTarget, cagr, years * 12) : 0;
   const effectiveSip = monthlySip > 0 ? monthlySip : Math.ceil(reqSip / 100) * 100;
-  const projected = sipFutureValue(effectiveSip, cagr, years * 12);
+  const projected = cagr > 0 ? sipFutureValue(effectiveSip, cagr, years * 12) : 0;
   const onTrack = projected >= inflatedTarget;
 
   const submit = () => {
     if (!name.trim()) {
       toast.error("Please give your goal a name");
+      return;
+    }
+    if (!presetId) {
+      toast.error("Please select a goal type");
       return;
     }
     if (targetAmount <= 0 || years <= 0) {
