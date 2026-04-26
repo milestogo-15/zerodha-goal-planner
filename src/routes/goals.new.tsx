@@ -44,7 +44,8 @@ function NewGoalPage() {
   const [monthlySip, setMonthlySip] = useState<number>(0);
   const [presetId, setPresetId] = useState<GoalPresetId | "">("");
   const [presetTouched, setPresetTouched] = useState(false);
-  const [inflationPct, setInflationPct] = useState<number>(0);
+  // Inflation is a non-negotiable global constant per allocation-engine spec
+  const inflationPct = 7;
 
   // Auto-suggest preset based on horizon, until user picks manually
   useEffect(() => {
