@@ -218,17 +218,13 @@ function NewGoalPage() {
                 <Label htmlFor="inflation">Inflation %</Label>
                 <Input
                   id="inflation"
-                  className="mt-1.5"
-                  inputMode="decimal"
-                  placeholder="e.g. 6"
-                  value={inflationPct || ""}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    setInflationPct(isFinite(v) ? Math.max(0, Math.min(20, v)) : 0);
-                  }}
+                  className="mt-1.5 cursor-not-allowed bg-muted/40"
+                  value="7"
+                  readOnly
+                  aria-readonly="true"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  India CPI long-run avg ~6%
+                  Fixed at 7% (India CPI long-run average) — non-editable
                 </p>
               </div>
 
