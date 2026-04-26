@@ -353,17 +353,18 @@ function NewGoalPage() {
                 </div>
               )}
 
-              <div className="md:col-span-2">
-                <Label>Monthly SIP <span className="font-normal text-muted-foreground">(calculated)</span></Label>
-                <p className="mt-1.5 text-lg font-semibold text-primary">
-                  {result && result.required_monthly_sip > 0
-                    ? <>{formatINRPlain(result.required_monthly_sip)} <span className="text-xs font-normal text-muted-foreground">/ month</span></>
-                    : <span className="text-muted-foreground">—</span>}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Auto-computed from your inflation-adjusted target and horizon.
-                </p>
-              </div>
+              {result && result.required_monthly_sip > 0 && (
+                <div className="md:col-span-2">
+                  <Label>Monthly SIP <span className="font-normal text-muted-foreground">(calculated)</span></Label>
+                  <p className="mt-1.5 text-lg font-semibold text-primary">
+                    {formatINRPlain(result.required_monthly_sip)}{" "}
+                    <span className="text-xs font-normal text-muted-foreground">/ month</span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Auto-computed from your inflation-adjusted target and horizon.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
