@@ -170,9 +170,11 @@ function NewGoalPage() {
                     }
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  ≈ {formatINR(inflatedTarget)} in {years}y at {inflationPct}% inflation
-                </p>
+                {targetAmount > 0 && years > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    ≈ {formatINR(inflatedTarget)} in {years}y at {inflationPct || DEFAULT_INFLATION_PCT}% inflation
+                  </p>
+                )}
               </div>
 
               <div>
