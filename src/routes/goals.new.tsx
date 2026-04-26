@@ -308,24 +308,12 @@ function NewGoalPage() {
               </div>
 
               <div>
-                <Label htmlFor="inflation" className="text-muted-foreground">
-                  Inflation
-                </Label>
-                <Input
-                  id="inflation"
-                  className="mt-1.5 cursor-not-allowed border-dashed bg-muted text-muted-foreground"
-                  value={
-                    result?.inflation_used === null
-                      ? "—"
-                      : result
-                        ? `${result.inflation_used}%`
-                        : "7%"
-                  }
-                  readOnly
-                  disabled
-                  aria-readonly="true"
-                  tabIndex={-1}
-                />
+                <Label className="text-muted-foreground">Inflation</Label>
+                <p className="mt-1.5 text-lg font-semibold text-primary">
+                  {result?.inflation_used === null
+                    ? <span className="text-muted-foreground">—</span>
+                    : `${result ? result.inflation_used : 7}%`}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {kind ? inflationLabel(kind, result?.inflation_used ?? 7) : "Auto-set per goal type"}
                 </p>
