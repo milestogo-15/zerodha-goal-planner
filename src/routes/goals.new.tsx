@@ -303,7 +303,7 @@ function NewGoalPage() {
 
               <div>
                 <Label className="text-muted-foreground">Inflation</Label>
-                <p className="mt-1.5 text-lg font-semibold text-primary">
+                <p className="mt-1.5 text-lg font-semibold text-foreground">
                   {result?.inflation_used === null
                     ? <span className="text-muted-foreground">—</span>
                     : `${result ? result.inflation_used : 7}%`}
