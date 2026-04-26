@@ -60,8 +60,12 @@ export const PRESETS: GoalPreset[] = [
     icon: "receipt",
     tagline: "Save ₹46,800/yr in tax + grow wealth",
     suggestedYears: [3, 10],
-    description: "ELSS gives 80C deduction (up to ₹1.5L) and 3-year lock-in.",
-    allocation: () => [{ fundId: "elss-largemid250", percent: 100 }],
+    description: "ELSS gives 80C deduction (up to ₹1.5L) and 3-year lock-in, with gold + debt diversifiers.",
+    allocation: () => [
+      { fundId: "elss-largemid250", percent: 80 },
+      { fundId: "goldcase", percent: 10 },
+      { fundId: "gsec813", percent: 10 },
+    ],
   },
   {
     id: "car",
