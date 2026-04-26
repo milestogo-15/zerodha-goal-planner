@@ -27,6 +27,44 @@ export interface GoalPreset {
   description: string;
 }
 
+// ─── Bucket allocations (per allocation-engine spec) ──────────────
+// SHORT (<3y): capital preservation + liquidity → blended ~6.6%
+const SHORT_BUCKET: AllocationItem[] = [
+  { fundId: "overnight", percent: 30 },
+  { fundId: "liquidcase", percent: 30 },
+  { fundId: "gsec-short", percent: 20 },
+  { fundId: "gold-fof", percent: 10 },
+  { fundId: "goldcase", percent: 10 },
+];
+
+// MEDIUM (3–7y): inflation-beating + moderate growth → blended ~9.3%
+const MEDIUM_BUCKET: AllocationItem[] = [
+  { fundId: "multi-asset", percent: 20 },
+  { fundId: "largemid250-if", percent: 20 },
+  { fundId: "gsec813", percent: 15 },
+  { fundId: "gold-fof", percent: 15 },
+  { fundId: "silver-fof", percent: 15 },
+  { fundId: "silvercase", percent: 8 },
+  { fundId: "goldcase", percent: 7 },
+];
+
+// LONG (>7y): max real growth, equity-heavy → blended ~13.0%
+const LONG_BUCKET = (large: string): AllocationItem[] => [
+  { fundId: "largemid250-if", percent: 20 },
+  { fundId: "mid150case", percent: 30 }, // absorbs ZE150 (15) + ZMIDS (15) — no MidSmall400 fund
+  { fundId: "smallcase", percent: 10 },
+  { fundId: "nifty50-if", percent: 10 },
+  { fundId: "niftycase", percent: 10 },
+  { fundId: large === "sensex-if" ? "sensex-if" : "sensex-if", percent: 8 },
+  { fundId: "top100case", percent: 7 },
+  { fundId: "goldcase", percent: 5 },
+];
+
+// TAX (ELSS): 80C + 3y lock-in → 13.0%
+const TAX_BUCKET: AllocationItem[] = [
+  { fundId: "elss-largemid250", percent: 100 },
+];
+
 export const PRESETS: GoalPreset[] = [
   {
     id: "emergency",
@@ -34,25 +72,18 @@ export const PRESETS: GoalPreset[] = [
     icon: "shield",
     tagline: "3–6 months of expenses, instant access",
     suggestedYears: [0, 1],
-    description: "Mostly liquid for instant access, with tiny gold + short G-Sec hedges.",
-    allocation: () => [
-      { fundId: "liquidcase", percent: 80 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "gsec813", percent: 10 },
-    ],
+    description:
+      "Forced into the SHORT bucket regardless of horizon — emergency funds must be instantly accessible.",
+    allocation: () => SHORT_BUCKET,
   },
   {
     id: "short-park",
-    name: "Short-Term Parking",
+    name: "Vacation / Short-Term",
     icon: "wallet",
     tagline: "Goals within 1–3 years",
     suggestedYears: [1, 3],
-    description: "Capital preservation with a sliver of gold and short G-Sec for inflation.",
-    allocation: () => [
-      { fundId: "liquidcase", percent: 80 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "gsec813", percent: 10 },
-    ],
+    description: "SHORT bucket — capital preservation with small gold + short G-Sec hedges.",
+    allocation: () => SHORT_BUCKET,
   },
   {
     id: "tax-saving",
@@ -60,56 +91,35 @@ export const PRESETS: GoalPreset[] = [
     icon: "receipt",
     tagline: "Save ₹46,800/yr in tax + grow wealth",
     suggestedYears: [3, 10],
-    description: "ELSS gives 80C deduction (up to ₹1.5L) and 3-year lock-in, with gold + debt diversifiers.",
-    allocation: () => [
-      { fundId: "elss-largemid250", percent: 80 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "gsec813", percent: 10 },
-    ],
+    description: "TAX bucket — 100% ELSS for 80C deduction (₹1.5L cap) with 3-year lock-in per SIP.",
+    allocation: () => TAX_BUCKET,
   },
   {
     id: "car",
     name: "Car / Down Payment",
     icon: "car",
-    tagline: "Mid-term, balanced approach",
-    suggestedYears: [3, 5],
-    description: "Tilted toward debt with modest equity for growth.",
-    allocation: (large) => [
-      { fundId: large, percent: 30 },
-      { fundId: "liquidcase", percent: 50 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "gsec813", percent: 10 },
-    ],
+    tagline: "Mid-term, balanced approach (3–7y)",
+    suggestedYears: [3, 7],
+    description: "MEDIUM bucket — multi-asset, large/mid equity, G-Sec, and gold/silver mix.",
+    allocation: () => MEDIUM_BUCKET,
   },
   {
     id: "house",
     name: "House Purchase",
     icon: "home",
-    tagline: "5–7 year accumulation",
-    suggestedYears: [5, 7],
-    description: "Balanced equity-debt mix targeting your down payment.",
-    allocation: (large) => [
-      { fundId: large, percent: 40 },
-      { fundId: "largemid250-if", percent: 20 },
-      { fundId: "gsec813", percent: 20 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "liquidcase", percent: 10 },
-    ],
+    tagline: "3–7 year accumulation",
+    suggestedYears: [3, 7],
+    description: "MEDIUM bucket — balanced multi-asset + equity + debt to target your down payment.",
+    allocation: () => MEDIUM_BUCKET,
   },
   {
     id: "education",
     name: "Child Education",
     icon: "graduation-cap",
-    tagline: "Long horizon, growth + stability",
+    tagline: "Long horizon, equity-led growth",
     suggestedYears: [7, 15],
-    description: "Equity-heavy for long compounding with multi-asset cushion.",
-    allocation: (large) => [
-      { fundId: "largemid250-if", percent: 50 },
-      { fundId: large, percent: 20 },
-      { fundId: "multi-asset", percent: 10 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "gsec813", percent: 10 },
-    ],
+    description: "LONG bucket — equity-heavy for compounding (uses MEDIUM if horizon < 7y).",
+    allocation: (large) => LONG_BUCKET(large),
   },
   {
     id: "retirement",
@@ -117,14 +127,8 @@ export const PRESETS: GoalPreset[] = [
     icon: "palmtree",
     tagline: "15+ year wealth compounding",
     suggestedYears: [15, 40],
-    description: "Aggressive growth across cap sizes with commodity diversification.",
-    allocation: (large) => [
-      { fundId: "largemid250-if", percent: 55 },
-      { fundId: large, percent: 20 },
-      { fundId: "smallcase", percent: 10 },
-      { fundId: "goldcase", percent: 10 },
-      { fundId: "silvercase", percent: 5 },
-    ],
+    description: "LONG bucket — aggressive equity across caps with gold diversifier.",
+    allocation: (large) => LONG_BUCKET(large),
   },
   {
     id: "wealth",
@@ -132,12 +136,8 @@ export const PRESETS: GoalPreset[] = [
     icon: "trending-up",
     tagline: "Pure long-term growth, 7+ years",
     suggestedYears: [7, 30],
-    description: "Maximum equity exposure with a small gold hedge.",
-    allocation: (large) => [
-      { fundId: "largemid250-if", percent: 70 },
-      { fundId: large, percent: 20 },
-      { fundId: "goldcase", percent: 10 },
-    ],
+    description: "LONG bucket — maximum equity exposure with a small gold hedge.",
+    allocation: (large) => LONG_BUCKET(large),
   },
   {
     id: "custom",
@@ -157,14 +157,37 @@ export const PRESETS: GoalPreset[] = [
 export const presetById = (id: GoalPresetId) =>
   PRESETS.find((p) => p.id === id) ?? PRESETS[PRESETS.length - 1];
 
+// Horizon-bucket logic from spec:
+//   years < 3   → SHORT
+//   years 3–7   → MEDIUM
+//   years > 7   → LONG
 export function suggestPresetForHorizon(years: number): GoalPresetId {
-  if (years < 1) return "emergency";
   if (years < 3) return "short-park";
-  if (years <= 5) return "car";
   if (years <= 7) return "house";
-  if (years <= 15) return "education";
-  return "retirement";
+  return "wealth";
 }
+
+// Map a preset to its bucket label (for display + audit)
+export type Bucket = "SHORT" | "MEDIUM" | "LONG" | "TAX";
+export function bucketForPreset(id: GoalPresetId, years: number): Bucket {
+  if (id === "tax-saving") return "TAX";
+  if (id === "emergency") return "SHORT";
+  if (id === "retirement") return years >= 7 ? "LONG" : "MEDIUM";
+  if (id === "education" || id === "wealth") return years > 7 ? "LONG" : "MEDIUM";
+  if (id === "short-park") return "SHORT";
+  if (id === "car" || id === "house") return years > 7 ? "LONG" : years < 3 ? "SHORT" : "MEDIUM";
+  // custom / fallback
+  if (years < 3) return "SHORT";
+  if (years <= 7) return "MEDIUM";
+  return "LONG";
+}
+
+export const BUCKET_BLENDED_RETURN: Record<Bucket, number> = {
+  SHORT: 6.6,
+  MEDIUM: 9.3,
+  LONG: 13.0,
+  TAX: 13.0,
+};
 
 // Resolve allocations + attach fund objects, gracefully skip missing
 export function resolveAllocation(
