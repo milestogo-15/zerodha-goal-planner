@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGoals, useSettings } from "@/lib/store";
-import { PRESETS, presetById, suggestPresetForHorizon, type GoalPresetId } from "@/lib/presets";
+import { PRESETS, presetById, type GoalPresetId } from "@/lib/presets";
 import { fundById } from "@/lib/funds";
 import {
   blendedCagr,
