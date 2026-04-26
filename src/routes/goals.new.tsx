@@ -162,6 +162,7 @@ function NewGoalPage() {
                   <Input
                     id="target"
                     inputMode="numeric"
+                    placeholder="e.g. 10,00,000"
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
                     value={targetAmount || ""}
                     onChange={(e) =>
