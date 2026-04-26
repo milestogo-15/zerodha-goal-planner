@@ -174,4 +174,10 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+  ::placeholder,
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in oklab, var(--color-muted-foreground) 55%, transparent);
+    font-weight: 400;
+  }
 }
