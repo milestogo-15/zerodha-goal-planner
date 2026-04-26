@@ -80,15 +80,12 @@ function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-        <Link to="/" className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center">
           <img
             src={logoUrl}
-            alt="Zerodha Fund House logo"
-            className="h-9 w-9 rounded-lg object-contain"
+            alt="Zerodha Fund House"
+            className="h-12 w-auto object-contain md:h-14"
           />
-          <span className="text-base font-bold tracking-tight md:text-lg">
-            Zerodha <span className="text-primary">Fund House</span>
-          </span>
         </Link>
         <nav className="flex items-center gap-1 text-sm font-medium md:gap-4">
           <Link
