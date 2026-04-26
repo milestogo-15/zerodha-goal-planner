@@ -164,9 +164,33 @@ function AboutPage() {
         ))}
       </div>
 
-      <div className="mt-10">
-        <Link
-          to="/"
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold">Inflation per goal</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Each goal type uses its own inflation rate when projecting tomorrow's target.
+        </p>
+        <div className="mt-3 overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Goal type</th>
+                <th className="px-3 py-2 text-right font-medium">Inflation</th>
+                <th className="px-3 py-2 text-left font-medium">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {INFLATION_REF.map((r) => (
+                <tr key={r.goal} className="border-t border-border/60">
+                  <td className="px-3 py-2 font-medium">{r.goal}</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-semibold">{r.rate}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{r.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
           className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-muted"
         >
           <Home className="h-4 w-4" /> Back to home
