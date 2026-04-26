@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { fundById } from "@/lib/funds";
 
@@ -134,12 +134,6 @@ function AboutPage() {
         >
           <ArrowLeft className="h-4 w-4" /> Back to dashboard
         </Link>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
-        >
-          <Home className="h-3.5 w-3.5" /> Home
-        </Link>
       </div>
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">How it works</h1>
@@ -190,15 +184,6 @@ function AboutPage() {
           </table>
         </div>
       </section>
-
-      <div className="mt-10">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-muted"
-        >
-          <Home className="h-4 w-4" /> Back to home
-        </Link>
-      </div>
     </div>
   );
 }
