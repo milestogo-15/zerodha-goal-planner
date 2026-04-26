@@ -189,6 +189,46 @@ export const BUCKET_BLENDED_RETURN: Record<Bucket, number> = {
   TAX: 13.0,
 };
 
+// ─── Engine bucket exports ──────────────────────────────────────
+// The engine consumes raw bucket allocations + an EMERGENCY-only
+// allocation that differs from SHORT (no equity/gold/silver).
+
+export const SHORT_BUCKET_ALLOC: AllocationItem[] = SHORT_BUCKET;
+export const MEDIUM_BUCKET_ALLOC: AllocationItem[] = MEDIUM_BUCKET;
+export const TAX_BUCKET_ALLOC: AllocationItem[] = TAX_BUCKET;
+export const longBucketAlloc = (large: string): AllocationItem[] => LONG_BUCKET(large);
+
+// EMERGENCY: ZOVER 40 / ZLIQD 40 / ZNSDG 20 — blended 6.2%. No equity/gold/silver.
+export const EMERGENCY_BUCKET_ALLOC: AllocationItem[] = [
+  { fundId: "overnight", percent: 40 },
+  { fundId: "liquidcase", percent: 40 },
+  { fundId: "gsec-short", percent: 20 },
+];
+
+export const EMERGENCY_BLENDED_RETURN = 6.2;
+
+// Preset-id → engine GoalKind. Engine lives in src/lib/engine.ts.
+export type GoalKind =
+  | "emergency"
+  | "vacation"
+  | "home"
+  | "education"
+  | "retirement"
+  | "wealth"
+  | "tax_saving";
+
+export const PRESET_TO_KIND: Record<GoalPresetId, GoalKind> = {
+  emergency: "emergency",
+  "short-park": "vacation",
+  "tax-saving": "tax_saving",
+  car: "home",
+  house: "home",
+  education: "education",
+  retirement: "retirement",
+  wealth: "wealth",
+  custom: "wealth",
+};
+
 // Resolve allocations + attach fund objects, gracefully skip missing
 export function resolveAllocation(
   items: AllocationItem[],

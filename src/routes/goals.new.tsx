@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,16 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGoals, useSettings } from "@/lib/store";
-import { PRESETS, presetById, type GoalPresetId } from "@/lib/presets";
+import { PRESETS, presetById, PRESET_TO_KIND, type GoalPresetId } from "@/lib/presets";
 import { fundById } from "@/lib/funds";
-import {
-  blendedCagr,
-  formatINR,
-  formatINRPlain,
-  inflateTarget,
-  requiredSip,
-  sipFutureValue,
-} from "@/lib/calc";
+import { evaluateGoal, type EngineResult } from "@/lib/engine";
+import { formatINR, formatINRPlain } from "@/lib/calc";
 
 export const Route = createFileRoute("/goals/new")({
   component: NewGoalPage,
@@ -31,6 +25,20 @@ export const Route = createFileRoute("/goals/new")({
     meta: [{ title: "Add a goal — Zerodha Fund House Planner" }],
   }),
 });
+
+const STRETCH_STYLES: Record<string, { color: string; bg: string; label: string }> = {
+  EASY: { color: "text-success", bg: "bg-success-soft", label: "Easy" },
+  MODERATE: { color: "text-info", bg: "bg-info-soft", label: "Moderate" },
+  STRETCHED: { color: "text-warning-foreground", bg: "bg-warning-soft", label: "Stretched" },
+  CRITICAL: { color: "text-destructive", bg: "bg-destructive/10", label: "Critical" },
+};
+
+function inflationLabel(kind: string, inflationUsed: number | null): string {
+  if (inflationUsed === null) return "Not applied — emergency buffer";
+  if (kind === "home") return "8% (property prices)";
+  if (kind === "vacation") return inflationUsed === 9 ? "9% (international travel)" : "7% (domestic)";
+  return "7% (CPI)";
+}
 
 function NewGoalPage() {
   const navigate = useNavigate();
@@ -42,61 +50,92 @@ function NewGoalPage() {
   const [years, setYears] = useState<number>(0);
   const [monthlySip, setMonthlySip] = useState<number>(0);
   const [presetId, setPresetId] = useState<GoalPresetId | "">("");
-  const [presetTouched, setPresetTouched] = useState(false);
-  // Inflation is a non-negotiable global constant per allocation-engine spec
-  const inflationPct = 7;
-
-  // Auto-suggest preset based on horizon, until user picks manually
-  useEffect(() => {
-    if (!presetTouched) {
-      // Keep empty until user picks; only auto-suggest after they've interacted
-    }
-  }, [years, presetTouched]);
+  const [vacationSubtype, setVacationSubtype] = useState<"domestic" | "international">("domestic");
+  const [existingSavings, setExistingSavings] = useState<number>(0);
 
   const preset = presetId ? presetById(presetId) : null;
-  const allocation = useMemo(
-    () => (preset ? preset.allocation(settings.largeCapFundId) : []),
-    [preset, settings.largeCapFundId],
-  );
-  const cagr = allocation.length ? blendedCagr(allocation) : 0;
-  const effectiveInflation = inflationPct;
-  const inflatedTarget = inflateTarget(targetAmount, years, effectiveInflation);
-  const reqSip = cagr > 0 ? requiredSip(inflatedTarget, cagr, years * 12) : 0;
-  const effectiveSip = monthlySip > 0 ? monthlySip : Math.ceil(reqSip / 100) * 100;
-  const projected = cagr > 0 ? sipFutureValue(effectiveSip, cagr, years * 12) : 0;
-  const onTrack = projected >= inflatedTarget;
+  const kind = presetId ? PRESET_TO_KIND[presetId] : null;
+
+  const result: EngineResult | null = useMemo(() => {
+    if (!kind) return null;
+    if (settings.monthlyIncome <= 0) return null;
+    if (years <= 0) return null;
+    if (kind !== "emergency" && targetAmount <= 0) return null;
+    return evaluateGoal({
+      kind,
+      target_today: targetAmount,
+      years: Math.max(1, years),
+      monthly_income: settings.monthlyIncome,
+      monthly_sip: monthlySip > 0 ? monthlySip : null,
+      vacation_subtype: vacationSubtype,
+      existing_savings: existingSavings,
+      largeCapFundId: settings.largeCapFundId,
+    });
+  }, [
+    kind,
+    targetAmount,
+    years,
+    settings.monthlyIncome,
+    settings.largeCapFundId,
+    monthlySip,
+    vacationSubtype,
+    existingSavings,
+  ]);
 
   const submit = () => {
     if (!name.trim()) {
       toast.error("Please give your goal a name");
       return;
     }
-    if (!presetId) {
+    if (!presetId || !kind) {
       toast.error("Please select a goal type");
       return;
     }
-    if (targetAmount <= 0 || years <= 0) {
-      toast.error("Target and horizon must be positive");
+    if (settings.monthlyIncome <= 0) {
+      toast.error("Please enter your monthly income");
       return;
     }
-    const sipToSave = effectiveSip;
-    if (sipToSave <= 0 || !isFinite(sipToSave)) {
-      toast.error("Could not calculate a valid SIP — adjust target or horizon");
+    if (years <= 0) {
+      toast.error("Years to goal must be at least 1");
+      return;
+    }
+    if (kind !== "emergency" && targetAmount <= 0) {
+      toast.error("Target amount must be positive");
+      return;
+    }
+    if (!result) {
+      toast.error("Could not evaluate this goal — please check your inputs");
+      return;
+    }
+    if (kind === "vacation" && result.affordability_flag === "WARN") {
+      toast.error(
+        `Not feasible at current income. Try a smaller target — e.g. ${formatINRPlain(
+          result.revised_target ?? 0,
+        )}.`,
+      );
+      return;
+    }
+    if (result.allocation.length === 0) {
+      toast.error("Allocation is empty — adjust target or horizon and try again");
       return;
     }
     const goal = addGoal({
       name: name.trim(),
       presetId,
-      targetAmount: Math.round(inflatedTarget),
+      targetAmount: result.inflated_target,
       years,
-      monthlySip: sipToSave,
-      allocation,
+      monthlySip: result.effective_monthly_sip,
+      allocation: result.allocation,
     });
     toast.success(
-      monthlySip > 0 ? "Goal added" : `Goal added — suggested SIP ${formatINRPlain(sipToSave)}/mo`,
+      monthlySip > 0
+        ? "Goal added"
+        : `Goal added — suggested SIP ${formatINRPlain(result.effective_monthly_sip)}/mo`,
     );
     navigate({ to: "/goals/$goalId", params: { goalId: goal.id } });
   };
+
+  const stretchStyle = result ? STRETCH_STYLES[result.stretch_band] : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
@@ -108,8 +147,8 @@ function NewGoalPage() {
       </Link>
       <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">Add a goal</h1>
       <p className="mt-2 max-w-xl text-muted-foreground">
-        Tell us what you're saving for. We'll suggest a Zerodha Fund House allocation tuned to your
-        horizon and adjust your target for inflation.
+        Tell us what you're saving for. We'll pick a Zerodha Fund House allocation tuned to your
+        horizon, income, and target — adjusted for inflation.
       </p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -132,10 +171,7 @@ function NewGoalPage() {
                 <Label htmlFor="goal-type">Goal type</Label>
                 <Select
                   value={presetId === "" ? undefined : presetId}
-                  onValueChange={(v) => {
-                    setPresetId(v as GoalPresetId);
-                    setPresetTouched(true);
-                  }}
+                  onValueChange={(v) => setPresetId(v as GoalPresetId)}
                 >
                   <SelectTrigger id="goal-type" className="mt-1.5">
                     <SelectValue placeholder="Select your goal" />
@@ -153,8 +189,67 @@ function NewGoalPage() {
                 )}
               </div>
 
+              {kind === "vacation" && (
+                <div className="md:col-span-2">
+                  <Label>Trip type</Label>
+                  <div className="mt-1.5 flex gap-2">
+                    {(["domestic", "international"] as const).map((sub) => (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => setVacationSubtype(sub)}
+                        className={`rounded-full border px-3.5 py-1.5 text-sm font-medium capitalize transition ${
+                          vacationSubtype === sub
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-foreground/70 hover:text-foreground"
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {kind === "emergency" && settings.monthlyIncome > 0 && (
+                <div className="md:col-span-2">
+                  <Label>Suggested target</Label>
+                  <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
+                    {(
+                      [
+                        { mult: 3, label: "Conservative" },
+                        { mult: 6, label: "Recommended" },
+                        { mult: 9, label: "Aggressive" },
+                      ] as const
+                    ).map(({ mult, label }) => {
+                      const value = settings.monthlyIncome * mult;
+                      const active = targetAmount === value;
+                      return (
+                        <button
+                          key={mult}
+                          type="button"
+                          onClick={() => setTargetAmount(value)}
+                          className={`rounded-xl border px-3 py-2 text-left transition ${
+                            active
+                              ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
+                              : "border-border bg-card hover:border-primary/40"
+                          }`}
+                        >
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            {label} · {mult}m
+                          </p>
+                          <p className="mt-0.5 text-sm font-semibold">{formatINRPlain(value)}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="target">Target amount (today's value)</Label>
+                <Label htmlFor="target">
+                  Target amount {kind !== "emergency" && "(today's value)"}
+                </Label>
                 <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-transparent px-3 shadow-sm focus-within:ring-1 focus-within:ring-ring">
                   <span className="text-muted-foreground">₹</span>
                   <Input
@@ -168,9 +263,10 @@ function NewGoalPage() {
                     }
                   />
                 </div>
-                {targetAmount > 0 && years > 0 && (
+                {result && targetAmount > 0 && years > 0 && result.inflation_used !== null && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    ≈ {formatINR(inflatedTarget)} in {years}y at 7% inflation
+                    ≈ {formatINR(result.inflated_target)} in {years}y at {result.inflation_used}%
+                    inflation
                   </p>
                 )}
               </div>
@@ -207,25 +303,55 @@ function NewGoalPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Used for affordability checks
+                  Used to gauge SIP affordability
                 </p>
               </div>
 
               <div>
-                <Label htmlFor="inflation" className="text-muted-foreground">Inflation %</Label>
+                <Label htmlFor="inflation" className="text-muted-foreground">
+                  Inflation
+                </Label>
                 <Input
                   id="inflation"
                   className="mt-1.5 cursor-not-allowed border-dashed bg-muted text-muted-foreground"
-                  value="7"
+                  value={
+                    result?.inflation_used === null
+                      ? "—"
+                      : result
+                        ? `${result.inflation_used}%`
+                        : "7%"
+                  }
                   readOnly
                   disabled
                   aria-readonly="true"
                   tabIndex={-1}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Fixed at 7% (India CPI long-run average) — non-editable
+                  {kind ? inflationLabel(kind, result?.inflation_used ?? 7) : "Auto-set per goal type"}
                 </p>
               </div>
+
+              {kind === "emergency" && (
+                <div>
+                  <Label htmlFor="existing">Already saved (optional)</Label>
+                  <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-transparent px-3 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                    <span className="text-muted-foreground">₹</span>
+                    <Input
+                      id="existing"
+                      inputMode="numeric"
+                      placeholder="e.g. 50,000"
+                      className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
+                      value={existingSavings || ""}
+                      onChange={(e) =>
+                        setExistingSavings(parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)
+                      }
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Reduces remaining SIP needed
+                  </p>
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <div className="flex items-baseline justify-between">
@@ -233,9 +359,9 @@ function NewGoalPage() {
                     Monthly SIP{" "}
                     <span className="font-normal text-muted-foreground">(optional)</span>
                   </Label>
-                  {monthlySip === 0 && isFinite(reqSip) && reqSip > 0 && (
+                  {result && monthlySip === 0 && result.required_monthly_sip > 0 && (
                     <span className="text-xs text-muted-foreground">
-                      Suggested: {formatINRPlain(Math.ceil(reqSip / 100) * 100)}
+                      Suggested: {formatINRPlain(result.required_monthly_sip)}
                     </span>
                   )}
                 </div>
@@ -245,8 +371,8 @@ function NewGoalPage() {
                     id="sip"
                     inputMode="numeric"
                     placeholder={
-                      isFinite(reqSip) && reqSip > 0
-                        ? `Auto: ${Math.ceil(reqSip / 100) * 100}`
+                      result && result.required_monthly_sip > 0
+                        ? `Auto: ${result.required_monthly_sip}`
                         : "Enter amount"
                     }
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
@@ -257,17 +383,8 @@ function NewGoalPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Leave blank and we'll calculate it from your inflation-adjusted target.
+                  Leave blank and we'll calculate from your inflation-adjusted target.
                 </p>
-                {monthlySip > 0 && !onTrack && reqSip > monthlySip && isFinite(reqSip) && (
-                  <button
-                    type="button"
-                    onClick={() => setMonthlySip(Math.ceil(reqSip / 100) * 100)}
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    Bump to {formatINRPlain(Math.ceil(reqSip / 100) * 100)} to hit target →
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -275,60 +392,183 @@ function NewGoalPage() {
 
         {/* Live preview */}
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Live projection
-            </p>
-            <p className="mt-2 text-3xl font-bold tracking-tight">{formatINR(projected)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              after {years}y at {cagr.toFixed(1)}% blended return · SIP{" "}
-              {formatINRPlain(effectiveSip)}/mo
-            </p>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full transition-all"
-                style={{
-                  width: `${Math.min(100, (projected / Math.max(1, inflatedTarget)) * 100)}%`,
-                  backgroundColor: onTrack ? "var(--success)" : "var(--primary)",
-                }}
-              />
-            </div>
-            <p
-              className={`mt-2 text-xs font-medium ${onTrack ? "text-success" : "text-foreground/70"}`}
-            >
-              {onTrack
-                ? `On track — surplus of ${formatINR(projected - inflatedTarget)}`
-                : `Shortfall: ${formatINR(inflatedTarget - projected)}`}
-            </p>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Target inflated to {formatINR(inflatedTarget)} (7% p.a.)
-            </p>
-          </div>
+          {result && (
+            <>
+              {/* Live projection */}
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Live projection
+                </p>
+                <p className="mt-2 text-3xl font-bold tracking-tight">
+                  {formatINR(result.projected_corpus)}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  after {years}y at {result.blended_return.toFixed(1)}% blended · SIP{" "}
+                  {formatINRPlain(result.effective_monthly_sip)}/mo
+                </p>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full transition-all"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (result.projected_corpus / Math.max(1, result.inflated_target)) * 100,
+                      )}%`,
+                      backgroundColor: result.on_track ? "var(--success)" : "var(--primary)",
+                    }}
+                  />
+                </div>
+                <p
+                  className={`mt-2 text-xs font-medium ${
+                    result.on_track ? "text-success" : "text-foreground/70"
+                  }`}
+                >
+                  {result.on_track
+                    ? `On track — surplus of ${formatINR(result.surplus_or_deficit)}`
+                    : `Shortfall: ${formatINR(-result.surplus_or_deficit)}`}
+                </p>
+                {result.inflation_used !== null && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Target inflated to {formatINR(result.inflated_target)} ({result.inflation_used}%
+                    p.a.)
+                  </p>
+                )}
+              </div>
 
-          {allocation.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Suggested allocation
-              </p>
-              <ul className="mt-3 space-y-2.5">
-                {allocation.map((a) => {
-                  const f = fundById(a.fundId);
-                  if (!f) return null;
-                  return (
-                    <li key={a.fundId} className="flex items-center justify-between gap-2 text-sm">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: `var(--${f.assetClass})` }}
-                        />
-                        <span className="truncate">{f.shortName}</span>
-                      </div>
-                      <span className="shrink-0 font-semibold tabular-nums">{a.percent}%</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+              {/* Affordability */}
+              {stretchStyle && (
+                <div
+                  className={`rounded-2xl border border-border ${stretchStyle.bg} p-5 shadow-sm`}
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/60">
+                      Affordability
+                    </p>
+                    <span className={`text-xs font-bold uppercase ${stretchStyle.color}`}>
+                      {stretchStyle.label}
+                    </span>
+                  </div>
+                  <p className={`mt-2 text-2xl font-bold tabular-nums ${stretchStyle.color}`}>
+                    {(result.stretch_ratio * 100).toFixed(1)}%
+                    <span className="ml-2 text-xs font-medium text-foreground/60">of income</span>
+                  </p>
+                  <p className="mt-1 text-xs text-foreground/70">
+                    {formatINRPlain(result.effective_monthly_sip)}/mo SIP on{" "}
+                    {formatINRPlain(settings.monthlyIncome)} income
+                  </p>
+                </div>
+              )}
+
+              {/* Suggested allocation */}
+              {result.allocation.length > 0 ? (
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Suggested allocation
+                    </p>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                      {result.bucket}
+                    </span>
+                  </div>
+                  <ul className="mt-3 space-y-2.5">
+                    {result.allocation.map((a) => {
+                      const f = fundById(a.fundId);
+                      if (!f) return null;
+                      return (
+                        <li
+                          key={a.fundId}
+                          className="flex items-center justify-between gap-2 text-sm"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: `var(--${f.assetClass})` }}
+                            />
+                            <span className="truncate">{f.shortName}</span>
+                          </div>
+                          <span className="shrink-0 font-semibold tabular-nums">{a.percent}%</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-warning/40 bg-warning-soft p-5 text-sm text-warning-foreground">
+                  Allocation blocked — see the suggestion below.
+                </div>
+              )}
+
+              {/* Smart suggestions */}
+              {(result.notes.length > 0 ||
+                result.revised_target ||
+                result.revised_years ||
+                result.step_up_corpus_10pct ||
+                result.glide_path_note ||
+                result.monthly_withdrawal_estimate ||
+                result.upgrade_to_long_suggested) && (
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Lightbulb className="h-3.5 w-3.5" />
+                    Smart suggestions
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    {result.notes.map((n, i) => (
+                      <p key={i} className="text-foreground/80">
+                        {n}
+                      </p>
+                    ))}
+                    {result.revised_target !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => setTargetAmount(result.revised_target!)}
+                        className="flex w-full items-center justify-between rounded-lg border border-border bg-surface/60 px-3 py-2 text-left transition hover:border-primary/40"
+                      >
+                        <span>
+                          Try a realistic target:{" "}
+                          <span className="font-semibold">
+                            {formatINRPlain(result.revised_target)}
+                          </span>
+                        </span>
+                        <span className="text-xs font-medium text-primary">Apply</span>
+                      </button>
+                    )}
+                    {result.revised_years !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => setYears(result.revised_years!)}
+                        className="flex w-full items-center justify-between rounded-lg border border-border bg-surface/60 px-3 py-2 text-left transition hover:border-primary/40"
+                      >
+                        <span>
+                          Extend horizon to{" "}
+                          <span className="font-semibold">{result.revised_years} years</span>
+                        </span>
+                        <span className="text-xs font-medium text-primary">Apply</span>
+                      </button>
+                    )}
+                    {result.step_up_corpus_10pct !== undefined && (
+                      <p className="rounded-lg bg-info-soft px-3 py-2 text-info">
+                        Step-up SIP (10%/yr) projection:{" "}
+                        <span className="font-semibold">
+                          {formatINR(result.step_up_corpus_10pct)}
+                        </span>
+                      </p>
+                    )}
+                    {result.glide_path_note && (
+                      <p className="text-xs text-muted-foreground">{result.glide_path_note}</p>
+                    )}
+                    {result.monthly_withdrawal_estimate !== undefined && (
+                      <p className="text-xs text-muted-foreground">
+                        At 6% safe withdrawal: ~
+                        <span className="font-semibold text-foreground">
+                          {formatINRPlain(result.monthly_withdrawal_estimate)}/mo
+                        </span>{" "}
+                        for ~20 years post-retirement.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <Button onClick={submit} size="lg" className="w-full rounded-full">
