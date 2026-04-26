@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
+
+import { fundById } from "@/lib/funds";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
@@ -9,89 +11,149 @@ export const Route = createFileRoute("/about")({
       {
         name: "description",
         content:
-          "How the goal-based investing planner allocates across Zerodha funds and projects growth.",
+          "Mapping of horizon buckets to Zerodha Fund House products used by the planner.",
       },
     ],
   }),
 });
 
+type Row = { fundId: string; weight: number; ret: number };
+
+const SHORT: Row[] = [
+  { fundId: "overnight", weight: 30, ret: 6.0 },
+  { fundId: "liquidcase", weight: 30, ret: 6.0 },
+  { fundId: "gsec-short", weight: 20, ret: 7.0 },
+  { fundId: "gold-fof", weight: 10, ret: 8.0 },
+  { fundId: "goldcase", weight: 10, ret: 8.0 },
+];
+
+const MEDIUM: Row[] = [
+  { fundId: "multi-asset", weight: 20, ret: 10.5 },
+  { fundId: "largemid250-if", weight: 20, ret: 11.0 },
+  { fundId: "gsec813", weight: 15, ret: 7.5 },
+  { fundId: "gold-fof", weight: 15, ret: 8.0 },
+  { fundId: "silver-fof", weight: 15, ret: 9.0 },
+  { fundId: "silvercase", weight: 8, ret: 9.0 },
+  { fundId: "goldcase", weight: 7, ret: 8.0 },
+];
+
+const LONG: Row[] = [
+  { fundId: "largemid250-if", weight: 20, ret: 13.0 },
+  { fundId: "mid150case", weight: 30, ret: 14.0 },
+  { fundId: "smallcase", weight: 10, ret: 15.0 },
+  { fundId: "nifty50-if", weight: 10, ret: 12.0 },
+  { fundId: "niftycase", weight: 10, ret: 12.0 },
+  { fundId: "sensex-if", weight: 8, ret: 12.0 },
+  { fundId: "top100case", weight: 7, ret: 12.0 },
+  { fundId: "goldcase", weight: 5, ret: 8.0 },
+];
+
+const TAX: Row[] = [{ fundId: "elss-largemid250", weight: 100, ret: 13.0 }];
+
+const BUCKETS: Array<{
+  key: string;
+  title: string;
+  horizon: string;
+  blended: string;
+  rows: Row[];
+}> = [
+  { key: "SHORT", title: "Short Bucket", horizon: "< 3 years", blended: "6.6%", rows: SHORT },
+  { key: "MEDIUM", title: "Medium Bucket", horizon: "3 – 7 years", blended: "9.3%", rows: MEDIUM },
+  { key: "LONG", title: "Long Bucket", horizon: "> 7 years", blended: "13.0%", rows: LONG },
+  { key: "TAX", title: "Tax Bucket (ELSS)", horizon: "≥ 3 years lock-in", blended: "13.0%", rows: TAX },
+];
+
+function BucketTable({ rows }: { rows: Row[] }) {
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 text-left font-medium">Fund</th>
+            <th className="px-3 py-2 text-right font-medium">Weight</th>
+            <th className="px-3 py-2 text-right font-medium">Return</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => {
+            const f = fundById(r.fundId);
+            return (
+              <tr key={`${r.fundId}-${i}`} className="border-t border-border/60">
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    {f && (
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: `var(--${f.assetClass})` }}
+                      />
+                    )}
+                    <span className="font-medium text-foreground">
+                      {f?.name ?? r.fundId}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                  {r.weight}%
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                  {r.ret.toFixed(1)}%
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-12">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to dashboard
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to dashboard
+        </Link>
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
+        >
+          <Home className="h-3.5 w-3.5" /> Home
+        </Link>
+      </div>
+
       <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">How it works</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Each goal maps to a horizon bucket. Below is the exact stock-to-bucket mapping used by the planner.
+      </p>
 
-      <div className="prose mt-6 max-w-none text-foreground/85">
-        <h2 className="mt-8 text-xl font-semibold">Goal-type presets</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Each goal you add maps to a preset (Emergency Fund, Retirement, Child Education, etc.).
-          Presets choose a tailored allocation across Zerodha Fund House products based on horizon
-          and risk profile. You can switch presets or build a custom mix anytime.
-        </p>
+      <div className="mt-8 space-y-8">
+        {BUCKETS.map((b) => (
+          <section key={b.key}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-xl font-semibold">{b.title}</h2>
+              <span className="text-xs text-muted-foreground">
+                Horizon: <span className="font-medium text-foreground">{b.horizon}</span>
+                {" · "}
+                Blended return:{" "}
+                <span className="font-medium text-foreground">{b.blended}</span>
+              </span>
+            </div>
+            <BucketTable rows={b.rows} />
+          </section>
+        ))}
+      </div>
 
-        <h2 className="mt-8 text-xl font-semibold">Allocation engine</h2>
-        <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-          <li>
-            <strong className="text-foreground">Short term (&lt;3y):</strong> dominated by{" "}
-            <em>LIQUIDCASE</em> with a Gold sliver for inflation hedge.
-          </li>
-          <li>
-            <strong className="text-foreground">Medium term (3–7y):</strong> balanced equity-debt
-            with Nifty 50 / SENSEX, G-Sec, and Gold.
-          </li>
-          <li>
-            <strong className="text-foreground">Long term (&gt;7y):</strong> equity-heavy with
-            LargeMidcap 250, Nifty 50, Smallcap and commodities.
-          </li>
-          <li>
-            <strong className="text-foreground">Tax saving:</strong> ELSS LargeMidcap 250 (3-year
-            lock-in, 80C deduction).
-          </li>
-        </ul>
-
-        <h2 className="mt-8 text-xl font-semibold">Return assumptions</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Projections compound monthly using historical-average CAGRs:
-        </p>
-        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <li>Equity (Nifty 50 / SENSEX) — 12%</li>
-          <li>Equity (LargeMidcap 250) — 13%</li>
-          <li>Equity (Midcap 150) — 14%, Smallcap — 15%</li>
-          <li>Debt (LIQUIDCASE / Overnight) — 6%</li>
-          <li>Debt (G-Sec funds) — 7–7.5%</li>
-          <li>Gold — 8%, Silver — 9%</li>
-          <li>Multi-Asset FoF — 10.5%</li>
-        </ul>
-
-        <h2 className="mt-8 text-xl font-semibold">Math</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Each sleeve compounds independently using the standard SIP future-value formula
-          <code className="mx-1 rounded bg-surface px-1.5 py-0.5 text-xs">
-            FV = P × ((1+r)<sup>n</sup> − 1) / r × (1+r)
-          </code>
-          where <em>r</em> is the monthly rate and <em>n</em> is months. Total corpus = sum across
-          sleeves.
-        </p>
-
-        <h2 className="mt-8 text-xl font-semibold">Disclaimer</h2>
-        <p className="mt-2 rounded-xl border border-border bg-warning-soft px-4 py-3 text-sm leading-relaxed text-foreground/80">
-          This is an educational tool, not investment advice. Past performance does not guarantee
-          future returns. Verify all fund details, expense ratios and risks on{" "}
-          <a
-            className="underline underline-offset-2 hover:text-foreground"
-            href="https://www.zerodhafundhouse.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            zerodhafundhouse.com
-          </a>{" "}
-          before investing. Mutual fund investments are subject to market risks.
-        </p>
+      <div className="mt-10">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-muted"
+        >
+          <Home className="h-4 w-4" /> Back to home
+        </Link>
       </div>
     </div>
   );
