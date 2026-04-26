@@ -570,15 +570,17 @@ function NewGoalPage() {
               )}
             </>
           )}
-
-          <Button onClick={submit} size="lg" className="w-full rounded-full">
-            Save goal <ArrowRight className="h-4 w-4" />
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            You can fine-tune amounts and funds after saving.{" "}
-            <ChevronRight className="inline h-3 w-3" />
-          </p>
         </aside>
+      </div>
+
+      <div className="mx-auto mt-8 max-w-xl space-y-2">
+        <Button onClick={submit} size="lg" className="w-full rounded-full">
+          Save goal <ArrowRight className="h-4 w-4" />
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          You can fine-tune amounts and funds after saving.{" "}
+          <ChevronRight className="inline h-3 w-3" />
+        </p>
       </div>
     </div>
   );
