@@ -217,7 +217,8 @@ function NewGoalPage() {
                   id="inflation"
                   className="mt-1.5"
                   inputMode="decimal"
-                  value={inflationPct}
+                  placeholder="e.g. 6"
+                  value={inflationPct || ""}
                   onChange={(e) => {
                     const v = parseFloat(e.target.value);
                     setInflationPct(isFinite(v) ? Math.max(0, Math.min(20, v)) : 0);
