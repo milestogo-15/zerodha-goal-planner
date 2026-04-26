@@ -143,16 +143,13 @@ function NewGoalPage() {
                   <SelectContent>
                     {PRESETS.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{p.name}</span>
-                          <span className="text-xs text-muted-foreground">{p.tagline}</span>
-                        </div>
+                        {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {preset && (
-                  <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{preset.tagline}</p>
                 )}
               </div>
 
