@@ -34,8 +34,12 @@ export const PRESETS: GoalPreset[] = [
     icon: "shield",
     tagline: "3–6 months of expenses, instant access",
     suggestedYears: [0, 1],
-    description: "100% liquid — your safety net for unexpected events.",
-    allocation: () => [{ fundId: "liquidcase", percent: 100 }],
+    description: "Mostly liquid for instant access, with tiny gold + short G-Sec hedges.",
+    allocation: () => [
+      { fundId: "liquidcase", percent: 80 },
+      { fundId: "goldcase", percent: 10 },
+      { fundId: "gsec813", percent: 10 },
+    ],
   },
   {
     id: "short-park",
