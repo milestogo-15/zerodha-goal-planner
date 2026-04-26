@@ -47,10 +47,11 @@ export const PRESETS: GoalPreset[] = [
     icon: "wallet",
     tagline: "Goals within 1–3 years",
     suggestedYears: [1, 3],
-    description: "Capital preservation with a sliver of gold for inflation.",
+    description: "Capital preservation with a sliver of gold and short G-Sec for inflation.",
     allocation: () => [
-      { fundId: "liquidcase", percent: 90 },
+      { fundId: "liquidcase", percent: 80 },
       { fundId: "goldcase", percent: 10 },
+      { fundId: "gsec813", percent: 10 },
     ],
   },
   {
