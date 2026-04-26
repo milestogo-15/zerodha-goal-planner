@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGoals, useSettings } from "@/lib/store";
-import { PRESETS, presetById, suggestPresetForHorizon, type GoalPresetId } from "@/lib/presets";
+import { PRESETS, presetById, type GoalPresetId } from "@/lib/presets";
 import { fundById } from "@/lib/funds";
 import {
   blendedCagr,
@@ -42,32 +42,36 @@ function NewGoalPage() {
   const [targetAmount, setTargetAmount] = useState<number>(1000000);
   const [years, setYears] = useState<number>(10);
   const [monthlySip, setMonthlySip] = useState<number>(0);
-  const [presetId, setPresetId] = useState<GoalPresetId>("wealth");
+  const [presetId, setPresetId] = useState<GoalPresetId | "">("");
   const [presetTouched, setPresetTouched] = useState(false);
   const [inflationPct, setInflationPct] = useState<number>(DEFAULT_INFLATION_PCT);
 
   // Auto-suggest preset based on horizon, until user picks manually
   useEffect(() => {
     if (!presetTouched) {
-      setPresetId(suggestPresetForHorizon(years));
+      // Keep empty until user picks; only auto-suggest after they've interacted
     }
   }, [years, presetTouched]);
 
-  const preset = presetById(presetId);
+  const preset = presetId ? presetById(presetId) : null;
   const allocation = useMemo(
-    () => preset.allocation(settings.largeCapFundId),
+    () => (preset ? preset.allocation(settings.largeCapFundId) : []),
     [preset, settings.largeCapFundId],
   );
-  const cagr = blendedCagr(allocation);
+  const cagr = allocation.length ? blendedCagr(allocation) : 0;
   const inflatedTarget = inflateTarget(targetAmount, years, inflationPct);
-  const reqSip = requiredSip(inflatedTarget, cagr, years * 12);
+  const reqSip = cagr > 0 ? requiredSip(inflatedTarget, cagr, years * 12) : 0;
   const effectiveSip = monthlySip > 0 ? monthlySip : Math.ceil(reqSip / 100) * 100;
-  const projected = sipFutureValue(effectiveSip, cagr, years * 12);
+  const projected = cagr > 0 ? sipFutureValue(effectiveSip, cagr, years * 12) : 0;
   const onTrack = projected >= inflatedTarget;
 
   const submit = () => {
     if (!name.trim()) {
       toast.error("Please give your goal a name");
+      return;
+    }
+    if (!presetId) {
+      toast.error("Please select a goal type");
       return;
     }
     if (targetAmount <= 0 || years <= 0) {
@@ -133,7 +137,7 @@ function NewGoalPage() {
                   }}
                 >
                   <SelectTrigger id="goal-type" className="mt-1.5">
-                    <SelectValue placeholder="Select a goal type" />
+                    <SelectValue placeholder="Selcet your goal" />
                   </SelectTrigger>
                   <SelectContent>
                     {PRESETS.map((p) => (
@@ -146,7 +150,9 @@ function NewGoalPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                {preset && (
+                  <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                )}
               </div>
 
               <div>

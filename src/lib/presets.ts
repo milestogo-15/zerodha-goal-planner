@@ -34,8 +34,12 @@ export const PRESETS: GoalPreset[] = [
     icon: "shield",
     tagline: "3–6 months of expenses, instant access",
     suggestedYears: [0, 1],
-    description: "100% liquid — your safety net for unexpected events.",
-    allocation: () => [{ fundId: "liquidcase", percent: 100 }],
+    description: "Mostly liquid for instant access, with tiny gold + short G-Sec hedges.",
+    allocation: () => [
+      { fundId: "liquidcase", percent: 80 },
+      { fundId: "goldcase", percent: 10 },
+      { fundId: "gsec813", percent: 10 },
+    ],
   },
   {
     id: "short-park",
@@ -43,10 +47,11 @@ export const PRESETS: GoalPreset[] = [
     icon: "wallet",
     tagline: "Goals within 1–3 years",
     suggestedYears: [1, 3],
-    description: "Capital preservation with a sliver of gold for inflation.",
+    description: "Capital preservation with a sliver of gold and short G-Sec for inflation.",
     allocation: () => [
-      { fundId: "liquidcase", percent: 90 },
+      { fundId: "liquidcase", percent: 80 },
       { fundId: "goldcase", percent: 10 },
+      { fundId: "gsec813", percent: 10 },
     ],
   },
   {
@@ -55,8 +60,12 @@ export const PRESETS: GoalPreset[] = [
     icon: "receipt",
     tagline: "Save ₹46,800/yr in tax + grow wealth",
     suggestedYears: [3, 10],
-    description: "ELSS gives 80C deduction (up to ₹1.5L) and 3-year lock-in.",
-    allocation: () => [{ fundId: "elss-largemid250", percent: 100 }],
+    description: "ELSS gives 80C deduction (up to ₹1.5L) and 3-year lock-in, with gold + debt diversifiers.",
+    allocation: () => [
+      { fundId: "elss-largemid250", percent: 80 },
+      { fundId: "goldcase", percent: 10 },
+      { fundId: "gsec813", percent: 10 },
+    ],
   },
   {
     id: "car",
