@@ -89,6 +89,14 @@ function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-1 text-sm font-medium md:gap-4">
           <Link
+            to="/"
+            className="rounded-md px-2.5 py-1.5 text-foreground/75 transition hover:text-foreground md:px-3"
+            activeProps={{ className: "text-foreground" }}
+            activeOptions={{ exact: true }}
+          >
+            Home
+          </Link>
+          <Link
             to="/funds"
             className="rounded-md px-2.5 py-1.5 text-foreground/75 transition hover:text-foreground md:px-3"
             activeProps={{ className: "text-foreground" }}
