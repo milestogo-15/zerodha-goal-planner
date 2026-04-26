@@ -196,6 +196,7 @@ function NewGoalPage() {
                   <Input
                     id="income"
                     inputMode="numeric"
+                    placeholder="e.g. 75,000"
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
                     value={settings.monthlyIncome || ""}
                     onChange={(e) =>
