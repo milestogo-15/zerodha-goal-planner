@@ -1,4 +1,6 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Link, Outlet, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { TrendingUp } from "lucide-react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 
@@ -29,20 +31,30 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Goal-Based Investing Planner — Zerodha Fund House" },
+      {
+        name: "description",
+        content:
+          "Plan your financial goals with Zerodha Fund House. Get tailored allocations across 17 funds, project growth, and check your SIP health.",
+      },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Goal-Based Investing Planner — Zerodha Fund House" },
+      {
+        property: "og:description",
+        content:
+          "Plan, allocate, and project your goals using Zerodha's index funds, ETFs and FoFs.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: appCss,
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap",
       },
+      { rel: "stylesheet", href: appCss },
     ],
   }),
   shellComponent: RootShell,
@@ -64,6 +76,82 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SiteHeader() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+        <Link to="/" className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <TrendingUp className="h-5 w-5" strokeWidth={2.4} />
+          </span>
+          <span className="text-base font-bold tracking-tight md:text-lg">
+            Zerodha <span className="text-primary">Fund House</span>
+          </span>
+        </Link>
+        <nav className="flex items-center gap-1 text-sm font-medium md:gap-4">
+          <Link
+            to="/funds"
+            className="rounded-md px-2.5 py-1.5 text-foreground/75 transition hover:text-foreground md:px-3"
+            activeProps={{ className: "text-foreground" }}
+          >
+            Funds
+          </Link>
+          <Link
+            to="/about"
+            className="rounded-md px-2.5 py-1.5 text-foreground/75 transition hover:text-foreground md:px-3"
+            activeProps={{ className: "text-foreground" }}
+          >
+            How it works
+          </Link>
+          <a
+            href="https://www.zerodhafundhouse.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-1 inline-flex items-center rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90 md:px-4 md:text-sm"
+          >
+            Invest
+          </a>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="mt-16 border-t border-border/60 bg-surface">
+      <div className="mx-auto max-w-6xl px-4 py-8 text-xs leading-relaxed text-muted-foreground md:px-6">
+        <p className="font-semibold text-foreground/80">Educational tool — not investment advice.</p>
+        <p className="mt-1">
+          Allocations and projections use historical-average return assumptions and are
+          illustrative only. Mutual fund investments are subject to market risks. Read all scheme
+          documents carefully before investing. Verify fund details on{" "}
+          <a
+            className="underline underline-offset-2 hover:text-foreground"
+            href="https://www.zerodhafundhouse.com/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            zerodhafundhouse.com
+          </a>
+          .
+        </p>
+      </div>
+    </footer>
+  );
+}
+
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <>
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        <SiteFooter />
+      </div>
+      <Toaster richColors position="top-center" />
+    </>
+  );
 }
