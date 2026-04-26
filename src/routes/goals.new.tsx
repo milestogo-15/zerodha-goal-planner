@@ -131,7 +131,7 @@ function NewGoalPage() {
               <div className="md:col-span-2">
                 <Label htmlFor="goal-type">Goal type</Label>
                 <Select
-                  value={presetId || undefined}
+                  value={presetId === "" ? undefined : presetId}
                   onValueChange={(v) => {
                     setPresetId(v as GoalPresetId);
                     setPresetTouched(true);
