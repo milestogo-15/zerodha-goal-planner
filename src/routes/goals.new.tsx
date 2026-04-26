@@ -137,7 +137,7 @@ function NewGoalPage() {
                   }}
                 >
                   <SelectTrigger id="goal-type" className="mt-1.5">
-                    <SelectValue placeholder="Selcet your goal" />
+                    <SelectValue placeholder="Select your goal" />
                   </SelectTrigger>
                   <SelectContent>
                     {PRESETS.map((p) => (
