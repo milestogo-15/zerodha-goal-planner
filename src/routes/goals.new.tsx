@@ -150,7 +150,9 @@ function NewGoalPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                {preset && (
+                  <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                )}
               </div>
 
               <div>
