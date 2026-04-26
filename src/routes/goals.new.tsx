@@ -212,13 +212,15 @@ function NewGoalPage() {
               </div>
 
               <div>
-                <Label htmlFor="inflation">Inflation %</Label>
+                <Label htmlFor="inflation" className="text-muted-foreground">Inflation %</Label>
                 <Input
                   id="inflation"
-                  className="mt-1.5 cursor-not-allowed bg-muted/40"
+                  className="mt-1.5 cursor-not-allowed border-dashed bg-muted text-muted-foreground"
                   value="7"
                   readOnly
+                  disabled
                   aria-readonly="true"
+                  tabIndex={-1}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Fixed at 7% (India CPI long-run average) — non-editable
