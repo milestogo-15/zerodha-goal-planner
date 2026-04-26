@@ -39,12 +39,12 @@ function NewGoalPage() {
   const { settings, update } = useSettings();
 
   const [name, setName] = useState("");
-  const [targetAmount, setTargetAmount] = useState<number>(1000000);
-  const [years, setYears] = useState<number>(10);
+  const [targetAmount, setTargetAmount] = useState<number>(0);
+  const [years, setYears] = useState<number>(0);
   const [monthlySip, setMonthlySip] = useState<number>(0);
   const [presetId, setPresetId] = useState<GoalPresetId | "">("");
   const [presetTouched, setPresetTouched] = useState(false);
-  const [inflationPct, setInflationPct] = useState<number>(DEFAULT_INFLATION_PCT);
+  const [inflationPct, setInflationPct] = useState<number>(0);
 
   // Auto-suggest preset based on horizon, until user picks manually
   useEffect(() => {
