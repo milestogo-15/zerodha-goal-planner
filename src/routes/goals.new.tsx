@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, ChevronRight, Lightbulb } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
