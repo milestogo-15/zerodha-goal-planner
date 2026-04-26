@@ -388,6 +388,16 @@ function NewGoalPage() {
               </div>
             </div>
           </div>
+
+          <div className="space-y-2">
+            <Button onClick={submit} size="lg" className="w-full rounded-full">
+              Save goal <ArrowRight className="h-4 w-4" />
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              You can fine-tune amounts and funds after saving.{" "}
+              <ChevronRight className="inline h-3 w-3" />
+            </p>
+          </div>
         </div>
 
         {/* Live preview */}
