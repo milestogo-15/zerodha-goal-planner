@@ -143,16 +143,13 @@ function NewGoalPage() {
                   <SelectContent>
                     {PRESETS.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{p.name}</span>
-                          <span className="text-xs text-muted-foreground">{p.tagline}</span>
-                        </div>
+                        {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {preset && (
-                  <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{preset.tagline}</p>
                 )}
               </div>
 
@@ -215,13 +212,15 @@ function NewGoalPage() {
               </div>
 
               <div>
-                <Label htmlFor="inflation">Inflation %</Label>
+                <Label htmlFor="inflation" className="text-muted-foreground">Inflation %</Label>
                 <Input
                   id="inflation"
-                  className="mt-1.5 cursor-not-allowed bg-muted/40"
+                  className="mt-1.5 cursor-not-allowed border-dashed bg-muted text-muted-foreground"
                   value="7"
                   readOnly
+                  disabled
                   aria-readonly="true"
+                  tabIndex={-1}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Fixed at 7% (India CPI long-run average) — non-editable
@@ -306,29 +305,31 @@ function NewGoalPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Suggested allocation
-            </p>
-            <ul className="mt-3 space-y-2.5">
-              {allocation.map((a) => {
-                const f = fundById(a.fundId);
-                if (!f) return null;
-                return (
-                  <li key={a.fundId} className="flex items-center justify-between gap-2 text-sm">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: `var(--${f.assetClass})` }}
-                      />
-                      <span className="truncate">{f.shortName}</span>
-                    </div>
-                    <span className="shrink-0 font-semibold tabular-nums">{a.percent}%</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          {allocation.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Suggested allocation
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                {allocation.map((a) => {
+                  const f = fundById(a.fundId);
+                  if (!f) return null;
+                  return (
+                    <li key={a.fundId} className="flex items-center justify-between gap-2 text-sm">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: `var(--${f.assetClass})` }}
+                        />
+                        <span className="truncate">{f.shortName}</span>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums">{a.percent}%</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           <Button onClick={submit} size="lg" className="w-full rounded-full">
             Save goal <ArrowRight className="h-4 w-4" />
