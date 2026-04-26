@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useGoals, useSettings } from "@/lib/store";
-import { presetById } from "@/lib/presets";
+import { presetById, PRESET_TO_KIND } from "@/lib/presets";
 import { fundById, FUNDS } from "@/lib/funds";
 import {
   blendedCagr,
@@ -34,6 +34,7 @@ import {
   requiredSip,
   sipFutureValue,
 } from "@/lib/calc";
+import { evaluateGoal } from "@/lib/engine";
 
 export const Route = createFileRoute("/goals/$goalId")({
   component: GoalDetail,
