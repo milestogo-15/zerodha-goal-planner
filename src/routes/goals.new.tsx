@@ -354,50 +354,25 @@ function NewGoalPage() {
               )}
 
               <div className="md:col-span-2">
-                <div className="flex items-baseline justify-between">
-                  <Label htmlFor="sip">
-                    Monthly SIP{" "}
-                    <span className="font-normal text-muted-foreground">(optional)</span>
-                  </Label>
-                  {result && monthlySip === 0 && result.required_monthly_sip > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      Suggested: {formatINRPlain(result.required_monthly_sip)}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-transparent px-3 shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                  <span className="text-muted-foreground">₹</span>
-                  <Input
-                    id="sip"
-                    inputMode="numeric"
-                    placeholder={
-                      result && result.required_monthly_sip > 0
-                        ? `Auto: ${result.required_monthly_sip}`
-                        : "Enter amount"
-                    }
-                    className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                    value={monthlySip || ""}
-                    onChange={(e) =>
-                      setMonthlySip(parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)
-                    }
-                  />
+                <Label>Monthly SIP <span className="font-normal text-muted-foreground">(calculated)</span></Label>
+                <div className="mt-1.5 flex items-center justify-between rounded-md border border-dashed border-input bg-muted px-3 py-2">
+                  <span className="text-lg font-semibold">
+                    {result && result.required_monthly_sip > 0
+                      ? formatINRPlain(result.required_monthly_sip)
+                      : "—"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">/ month</span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Leave blank and we'll calculate from your inflation-adjusted target.
+                  Auto-computed from your inflation-adjusted target and horizon.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Button onClick={submit} size="lg" className="w-full rounded-full">
-              Save goal <ArrowRight className="h-4 w-4" />
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              You can fine-tune amounts and funds after saving.{" "}
-              <ChevronRight className="inline h-3 w-3" />
-            </p>
-          </div>
+          <Button onClick={submit} size="lg" className="w-full rounded-full">
+            Save goal <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Live preview */}
