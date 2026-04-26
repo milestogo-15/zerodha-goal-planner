@@ -305,29 +305,31 @@ function NewGoalPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Suggested allocation
-            </p>
-            <ul className="mt-3 space-y-2.5">
-              {allocation.map((a) => {
-                const f = fundById(a.fundId);
-                if (!f) return null;
-                return (
-                  <li key={a.fundId} className="flex items-center justify-between gap-2 text-sm">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: `var(--${f.assetClass})` }}
-                      />
-                      <span className="truncate">{f.shortName}</span>
-                    </div>
-                    <span className="shrink-0 font-semibold tabular-nums">{a.percent}%</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          {allocation.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Suggested allocation
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                {allocation.map((a) => {
+                  const f = fundById(a.fundId);
+                  if (!f) return null;
+                  return (
+                    <li key={a.fundId} className="flex items-center justify-between gap-2 text-sm">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: `var(--${f.assetClass})` }}
+                        />
+                        <span className="truncate">{f.shortName}</span>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums">{a.percent}%</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           <Button onClick={submit} size="lg" className="w-full rounded-full">
             Save goal <ArrowRight className="h-4 w-4" />
