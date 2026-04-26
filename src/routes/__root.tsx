@@ -81,9 +81,11 @@ function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
         <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <TrendingUp className="h-5 w-5" strokeWidth={2.4} />
-          </span>
+          <img
+            src={logoUrl}
+            alt="Zerodha Fund House logo"
+            className="h-9 w-9 rounded-lg object-contain"
+          />
           <span className="text-base font-bold tracking-tight md:text-lg">
             Zerodha <span className="text-primary">Fund House</span>
           </span>
