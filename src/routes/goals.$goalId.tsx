@@ -72,6 +72,19 @@ function GoalDetail() {
   const reqSip = requiredSip(goal.targetAmount, cagr, goal.years * 12);
   const totalInvested = goal.monthlySip * goal.years * 12;
 
+  const engine = useMemo(
+    () =>
+      evaluateGoal({
+        kind: PRESET_TO_KIND[goal.presetId],
+        target_today: goal.targetAmount,
+        years: goal.years,
+        monthly_income: settings.monthlyIncome || 0,
+        monthly_sip: goal.monthlySip || null,
+        largeCapFundId: settings.largeCapFundId,
+      }),
+    [goal.presetId, goal.targetAmount, goal.years, goal.monthlySip, settings.monthlyIncome, settings.largeCapFundId],
+  );
+
   const data = useMemo(
     () => projectGrowth(goal.monthlySip, goal.allocation, goal.years, cagrAdjust),
     [goal.monthlySip, goal.allocation, goal.years, cagrAdjust],
