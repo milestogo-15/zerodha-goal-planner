@@ -50,6 +50,12 @@ const LONG: Row[] = [
 
 const TAX: Row[] = [{ fundId: "elss-largemid250", weight: 100, ret: 13.0 }];
 
+const EMERGENCY: Row[] = [
+  { fundId: "overnight", weight: 40, ret: 6.0 },
+  { fundId: "liquidcase", weight: 40, ret: 6.0 },
+  { fundId: "gsec-short", weight: 20, ret: 7.0 },
+];
+
 const BUCKETS: Array<{
   key: string;
   title: string;
@@ -57,10 +63,21 @@ const BUCKETS: Array<{
   blended: string;
   rows: Row[];
 }> = [
+  { key: "EMERGENCY", title: "Emergency Bucket", horizon: "Any horizon (locked)", blended: "6.2%", rows: EMERGENCY },
   { key: "SHORT", title: "Short Bucket", horizon: "< 3 years", blended: "6.6%", rows: SHORT },
   { key: "MEDIUM", title: "Medium Bucket", horizon: "3 – 7 years", blended: "9.3%", rows: MEDIUM },
   { key: "LONG", title: "Long Bucket", horizon: "> 7 years", blended: "13.0%", rows: LONG },
   { key: "TAX", title: "Tax Bucket (ELSS)", horizon: "≥ 3 years lock-in", blended: "13.0%", rows: TAX },
+];
+
+const INFLATION_REF: Array<{ goal: string; rate: string; reason: string }> = [
+  { goal: "Education", rate: "7%", reason: "Tracks standard CPI" },
+  { goal: "Home", rate: "8%", reason: "Property appreciation > CPI" },
+  { goal: "Vacation (domestic)", rate: "7%", reason: "Standard CPI" },
+  { goal: "Vacation (international)", rate: "9%", reason: "INR depreciation + overseas inflation" },
+  { goal: "Wealth", rate: "7%", reason: "Real purchasing power target" },
+  { goal: "Retirement", rate: "7%", reason: "Standard CPI, long horizon" },
+  { goal: "Emergency", rate: "—", reason: "Living-expense buffer, not a future corpus" },
 ];
 
 function BucketTable({ rows }: { rows: Row[] }) {
@@ -146,6 +163,33 @@ function AboutPage() {
           </section>
         ))}
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold">Inflation per goal</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Each goal type uses its own inflation rate when projecting tomorrow's target.
+        </p>
+        <div className="mt-3 overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Goal type</th>
+                <th className="px-3 py-2 text-right font-medium">Inflation</th>
+                <th className="px-3 py-2 text-left font-medium">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {INFLATION_REF.map((r) => (
+                <tr key={r.goal} className="border-t border-border/60">
+                  <td className="px-3 py-2 font-medium">{r.goal}</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-semibold">{r.rate}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{r.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="mt-10">
         <Link
