@@ -21,6 +21,19 @@ export function requiredSip(target: number, annualRatePct: number, months: numbe
   return target / (factor * (1 + r));
 }
 
+// Default inflation assumption for India (CPI long-term average)
+export const DEFAULT_INFLATION_PCT = 6;
+
+// Inflate a present-value target to its future nominal value
+export function inflateTarget(
+  target: number,
+  years: number,
+  inflationPct: number = DEFAULT_INFLATION_PCT,
+): number {
+  if (years <= 0) return target;
+  return target * Math.pow(1 + inflationPct / 100, years);
+}
+
 export function blendedCagr(items: AllocationItem[]): number {
   const resolved = resolveAllocation(items);
   const totalPct = resolved.reduce((s, x) => s + x.percent, 0) || 1;

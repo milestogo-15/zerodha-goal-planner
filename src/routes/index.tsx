@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   Plus,
@@ -18,9 +17,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { useGoals, useSettings } from "@/lib/store";
+import { useGoals } from "@/lib/store";
 import { presetById } from "@/lib/presets";
 import {
   blendedCagr,
@@ -62,20 +59,6 @@ function GoalIcon({ name, className }: { name: string; className?: string }) {
 
 function Dashboard() {
   const { goals, deleteGoal } = useGoals();
-  const { settings, update } = useSettings();
-
-  const totalSip = useMemo(
-    () => goals.reduce((s, g) => s + g.monthlySip, 0),
-    [goals],
-  );
-  const sipPct = settings.monthlyIncome > 0 ? (totalSip / settings.monthlyIncome) * 100 : 0;
-
-  const healthStatus =
-    sipPct < 30
-      ? { label: "Healthy", color: "text-success", bg: "bg-success-soft", ring: "ring-success/30" }
-      : sipPct < 50
-        ? { label: "Stretched", color: "text-warning-foreground", bg: "bg-warning-soft", ring: "ring-warning/40" }
-        : { label: "Over-allocated", color: "text-destructive", bg: "bg-destructive/10", ring: "ring-destructive/40" };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
@@ -88,84 +71,6 @@ function Dashboard() {
           Plan your financial future with precision. Add your goals and we'll allocate across
           Zerodha Fund House products and project the rest.
         </p>
-      </section>
-
-      {/* Monthly Income card */}
-      <section className="mb-6">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
-          <div className="flex items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info">
-              <Wallet className="h-5 w-5" strokeWidth={2} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-semibold">Monthly Income</h2>
-              <p className="text-sm text-muted-foreground">Take-home monthly earnings</p>
-              <div className="mt-4 rounded-xl bg-surface px-4 py-3">
-                <div className="flex items-center gap-2 text-2xl font-semibold">
-                  <span className="text-muted-foreground">₹</span>
-                  <Input
-                    inputMode="numeric"
-                    value={settings.monthlyIncome || ""}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value.replace(/\D/g, ""), 10) || 0;
-                      update({ monthlyIncome: v });
-                    }}
-                    className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold shadow-none focus-visible:ring-0"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div className="mt-4">
-                <Slider
-                  min={10000}
-                  max={1000000}
-                  step={5000}
-                  value={[Math.min(1000000, Math.max(10000, settings.monthlyIncome || 10000))]}
-                  onValueChange={(v) => update({ monthlyIncome: v[0] })}
-                />
-                <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                  <span>₹10,000</span>
-                  <span>₹10,00,000</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SIP Health Check */}
-      <section className="mb-6">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Target className="h-5 w-5 text-foreground/70" strokeWidth={2} />
-            <h2 className="text-lg font-semibold">SIP Health Check</h2>
-          </div>
-          <div className={`rounded-xl ${healthStatus.bg} px-5 py-4 ring-1 ${healthStatus.ring}`}>
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/60">
-                  Total Monthly SIP
-                </p>
-                <p className="mt-1 text-3xl font-bold tracking-tight">{formatINRPlain(totalSip)}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${healthStatus.color}`}>{sipPct.toFixed(1)}%</p>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/60">
-                  of income · {healthStatus.label}
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-foreground/10">
-              <div
-                className="h-full bg-success transition-all"
-                style={{ width: `${Math.min(100, sipPct)}%`, backgroundColor: sipPct >= 50 ? "var(--destructive)" : sipPct >= 30 ? "var(--warning)" : "var(--success)" }}
-              />
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Aim to keep total SIPs under 30% of income for a healthy budget.
-          </p>
-        </div>
       </section>
 
       {/* Goals */}
