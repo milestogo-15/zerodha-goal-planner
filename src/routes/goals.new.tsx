@@ -42,14 +42,14 @@ function NewGoalPage() {
   const [targetAmount, setTargetAmount] = useState<number>(1000000);
   const [years, setYears] = useState<number>(10);
   const [monthlySip, setMonthlySip] = useState<number>(0);
-  const [presetId, setPresetId] = useState<GoalPresetId>("wealth");
+  const [presetId, setPresetId] = useState<GoalPresetId | "">("");
   const [presetTouched, setPresetTouched] = useState(false);
   const [inflationPct, setInflationPct] = useState<number>(DEFAULT_INFLATION_PCT);
 
   // Auto-suggest preset based on horizon, until user picks manually
   useEffect(() => {
     if (!presetTouched) {
-      setPresetId(suggestPresetForHorizon(years));
+      // Keep empty until user picks; only auto-suggest after they've interacted
     }
   }, [years, presetTouched]);
 
