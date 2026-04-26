@@ -355,14 +355,11 @@ function NewGoalPage() {
 
               <div className="md:col-span-2">
                 <Label>Monthly SIP <span className="font-normal text-muted-foreground">(calculated)</span></Label>
-                <div className="mt-1.5 flex items-center justify-between rounded-md border border-dashed border-input bg-muted px-3 py-2">
-                  <span className="text-lg font-semibold">
-                    {result && result.required_monthly_sip > 0
-                      ? formatINRPlain(result.required_monthly_sip)
-                      : "—"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">/ month</span>
-                </div>
+                <p className="mt-1.5 text-lg font-semibold text-primary">
+                  {result && result.required_monthly_sip > 0
+                    ? <>{formatINRPlain(result.required_monthly_sip)} <span className="text-xs font-normal text-muted-foreground">/ month</span></>
+                    : <span className="text-muted-foreground">—</span>}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Auto-computed from your inflation-adjusted target and horizon.
                 </p>
