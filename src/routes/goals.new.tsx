@@ -181,6 +181,7 @@ function NewGoalPage() {
                   id="years"
                   className="mt-1.5"
                   inputMode="numeric"
+                  placeholder="e.g. 10"
                   value={years || ""}
                   onChange={(e) =>
                     setYears(Math.max(0, Math.min(50, parseInt(e.target.value, 10) || 0)))
