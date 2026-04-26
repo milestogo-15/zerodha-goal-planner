@@ -59,7 +59,8 @@ function NewGoalPage() {
     [preset, settings.largeCapFundId],
   );
   const cagr = allocation.length ? blendedCagr(allocation) : 0;
-  const inflatedTarget = inflateTarget(targetAmount, years, inflationPct);
+  const effectiveInflation = inflationPct > 0 ? inflationPct : DEFAULT_INFLATION_PCT;
+  const inflatedTarget = inflateTarget(targetAmount, years, effectiveInflation);
   const reqSip = cagr > 0 ? requiredSip(inflatedTarget, cagr, years * 12) : 0;
   const effectiveSip = monthlySip > 0 ? monthlySip : Math.ceil(reqSip / 100) * 100;
   const projected = cagr > 0 ? sipFutureValue(effectiveSip, cagr, years * 12) : 0;
