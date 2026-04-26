@@ -134,12 +134,6 @@ function AboutPage() {
         >
           <ArrowLeft className="h-4 w-4" /> Back to dashboard
         </Link>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background transition hover:opacity-90"
-        >
-          <Home className="h-3.5 w-3.5" /> Home
-        </Link>
       </div>
 
       <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">How it works</h1>
