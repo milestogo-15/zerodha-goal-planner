@@ -60,7 +60,7 @@ function NewGoalPage() {
     [preset, settings.largeCapFundId],
   );
   const cagr = allocation.length ? blendedCagr(allocation) : 0;
-  const effectiveInflation = inflationPct > 0 ? inflationPct : DEFAULT_INFLATION_PCT;
+  const effectiveInflation = inflationPct;
   const inflatedTarget = inflateTarget(targetAmount, years, effectiveInflation);
   const reqSip = cagr > 0 ? requiredSip(inflatedTarget, cagr, years * 12) : 0;
   const effectiveSip = monthlySip > 0 ? monthlySip : Math.ceil(reqSip / 100) * 100;
@@ -174,7 +174,7 @@ function NewGoalPage() {
                 </div>
                 {targetAmount > 0 && years > 0 && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    ≈ {formatINR(inflatedTarget)} in {years}y at {inflationPct || DEFAULT_INFLATION_PCT}% inflation
+                    ≈ {formatINR(inflatedTarget)} in {years}y at 7% inflation
                   </p>
                 )}
               </div>
@@ -303,7 +303,7 @@ function NewGoalPage() {
                 : `Shortfall: ${formatINR(inflatedTarget - projected)}`}
             </p>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Target inflated to {formatINR(inflatedTarget)} ({inflationPct}% p.a.)
+              Target inflated to {formatINR(inflatedTarget)} (7% p.a.)
             </p>
           </div>
 
