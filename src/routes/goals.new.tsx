@@ -39,12 +39,12 @@ function NewGoalPage() {
   const { settings, update } = useSettings();
 
   const [name, setName] = useState("");
-  const [targetAmount, setTargetAmount] = useState<number>(1000000);
-  const [years, setYears] = useState<number>(10);
+  const [targetAmount, setTargetAmount] = useState<number>(0);
+  const [years, setYears] = useState<number>(0);
   const [monthlySip, setMonthlySip] = useState<number>(0);
   const [presetId, setPresetId] = useState<GoalPresetId | "">("");
   const [presetTouched, setPresetTouched] = useState(false);
-  const [inflationPct, setInflationPct] = useState<number>(DEFAULT_INFLATION_PCT);
+  const [inflationPct, setInflationPct] = useState<number>(0);
 
   // Auto-suggest preset based on horizon, until user picks manually
   useEffect(() => {
@@ -59,7 +59,8 @@ function NewGoalPage() {
     [preset, settings.largeCapFundId],
   );
   const cagr = allocation.length ? blendedCagr(allocation) : 0;
-  const inflatedTarget = inflateTarget(targetAmount, years, inflationPct);
+  const effectiveInflation = inflationPct > 0 ? inflationPct : DEFAULT_INFLATION_PCT;
+  const inflatedTarget = inflateTarget(targetAmount, years, effectiveInflation);
   const reqSip = cagr > 0 ? requiredSip(inflatedTarget, cagr, years * 12) : 0;
   const effectiveSip = monthlySip > 0 ? monthlySip : Math.ceil(reqSip / 100) * 100;
   const projected = cagr > 0 ? sipFutureValue(effectiveSip, cagr, years * 12) : 0;
@@ -162,6 +163,7 @@ function NewGoalPage() {
                   <Input
                     id="target"
                     inputMode="numeric"
+                    placeholder="e.g. 10,00,000"
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
                     value={targetAmount || ""}
                     onChange={(e) =>
@@ -169,9 +171,11 @@ function NewGoalPage() {
                     }
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  ≈ {formatINR(inflatedTarget)} in {years}y at {inflationPct}% inflation
-                </p>
+                {targetAmount > 0 && years > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    ≈ {formatINR(inflatedTarget)} in {years}y at {inflationPct || DEFAULT_INFLATION_PCT}% inflation
+                  </p>
+                )}
               </div>
 
               <div>
@@ -180,6 +184,7 @@ function NewGoalPage() {
                   id="years"
                   className="mt-1.5"
                   inputMode="numeric"
+                  placeholder="e.g. 10"
                   value={years || ""}
                   onChange={(e) =>
                     setYears(Math.max(0, Math.min(50, parseInt(e.target.value, 10) || 0)))
@@ -194,6 +199,7 @@ function NewGoalPage() {
                   <Input
                     id="income"
                     inputMode="numeric"
+                    placeholder="e.g. 75,000"
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
                     value={settings.monthlyIncome || ""}
                     onChange={(e) =>
@@ -214,7 +220,8 @@ function NewGoalPage() {
                   id="inflation"
                   className="mt-1.5"
                   inputMode="decimal"
-                  value={inflationPct}
+                  placeholder="e.g. 6"
+                  value={inflationPct || ""}
                   onChange={(e) => {
                     const v = parseFloat(e.target.value);
                     setInflationPct(isFinite(v) ? Math.max(0, Math.min(20, v)) : 0);
