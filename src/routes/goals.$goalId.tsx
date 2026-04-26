@@ -166,6 +166,142 @@ function GoalDetail() {
         </span>
       </div>
 
+      {/* Affordability banner (engine) */}
+      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface/60 px-4 py-3 text-sm">
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${
+            engine.stretch_band === "EASY"
+              ? "bg-success-soft text-success ring-success/30"
+              : engine.stretch_band === "MODERATE"
+                ? "bg-muted text-foreground ring-border"
+                : engine.stretch_band === "STRETCHED"
+                  ? "bg-warning-soft text-warning-foreground ring-warning/40"
+                  : "bg-destructive/10 text-destructive ring-destructive/30"
+          }`}
+        >
+          {engine.stretch_band}
+        </span>
+        <span className="text-muted-foreground">
+          Required SIP is{" "}
+          <span className="font-semibold text-foreground">
+            {(engine.stretch_ratio * 100).toFixed(1)}%
+          </span>{" "}
+          of your monthly income · inflation{" "}
+          <span className="font-semibold text-foreground">
+            {engine.inflation_used === null ? "not applied" : `${engine.inflation_used}%`}
+          </span>{" "}
+          · bucket{" "}
+          <span className="font-semibold text-foreground">{engine.bucket}</span>
+        </span>
+      </div>
+
+      {/* Insights from engine */}
+      {(engine.notes.length > 0 ||
+        engine.glide_path_note ||
+        engine.monthly_withdrawal_estimate ||
+        engine.step_up_corpus_10pct ||
+        engine.revised_target ||
+        engine.revised_years ||
+        engine.upgrade_to_long_suggested) && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
+          <h2 className="text-lg font-semibold">Insights</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {engine.notes.map((n, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span className="text-muted-foreground">{n}</span>
+              </li>
+            ))}
+            {engine.glide_path_note && (
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-info" />
+                <span>
+                  <span className="font-medium">Glide path:</span>{" "}
+                  <span className="text-muted-foreground">{engine.glide_path_note}</span>
+                </span>
+              </li>
+            )}
+            {engine.monthly_withdrawal_estimate ? (
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+                <span>
+                  <span className="font-medium">Withdrawal estimate:</span>{" "}
+                  <span className="text-muted-foreground">
+                    ~{formatINRPlain(engine.monthly_withdrawal_estimate)}/mo at a 6% safe
+                    withdrawal rate (≈ 20 years post-retirement).
+                  </span>
+                </span>
+              </li>
+            ) : null}
+            {engine.step_up_corpus_10pct ? (
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+                <span>
+                  <span className="font-medium">Step-up SIP (+10%/yr):</span>{" "}
+                  <span className="text-muted-foreground">
+                    Optimistic corpus of {formatINR(engine.step_up_corpus_10pct)} if you raise
+                    your SIP by 10% every year.
+                  </span>
+                </span>
+              </li>
+            ) : null}
+            {engine.revised_target ? (
+              <li className="flex flex-wrap items-center gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                <span>
+                  <span className="font-medium">Revised target:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {formatINR(engine.revised_target)} fits your income better.
+                  </span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-2 h-7 rounded-full text-xs"
+                  onClick={() => {
+                    updateGoal(goal.id, { targetAmount: engine.revised_target! });
+                    toast.success("Target updated");
+                  }}
+                >
+                  Apply
+                </Button>
+              </li>
+            ) : null}
+            {engine.revised_years ? (
+              <li className="flex flex-wrap items-center gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                <span>
+                  <span className="font-medium">Revised horizon:</span>{" "}
+                  <span className="text-muted-foreground">
+                    Extending to {engine.revised_years} years brings stretch under 25%.
+                  </span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-2 h-7 rounded-full text-xs"
+                  onClick={() => {
+                    updateGoal(goal.id, { years: engine.revised_years! });
+                    toast.success("Horizon updated");
+                  }}
+                >
+                  Apply
+                </Button>
+              </li>
+            ) : null}
+            {engine.upgrade_to_long_suggested ? (
+              <li className="flex gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span className="text-muted-foreground">
+                  Adding 1–2 years moves you to the equity-heavy LONG bucket — significantly
+                  better expected returns.
+                </span>
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      )}
+
       {/* Edit basics */}
       <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
         <h2 className="text-lg font-semibold">Adjust goal</h2>
