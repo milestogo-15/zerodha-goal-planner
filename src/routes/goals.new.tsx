@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, ChevronRight, Lightbulb } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -139,13 +139,7 @@ function NewGoalPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to dashboard
-      </Link>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">Add a goal</h1>
+      <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Add a goal</h1>
       <p className="mt-2 max-w-xl text-muted-foreground">
         Tell us what you're saving for. We'll pick a Zerodha Fund House allocation tuned to your
         horizon, income, and target — adjusted for inflation.
