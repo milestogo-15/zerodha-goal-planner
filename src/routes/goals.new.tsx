@@ -18,7 +18,6 @@ import { PRESETS, presetById, type GoalPresetId } from "@/lib/presets";
 import { fundById } from "@/lib/funds";
 import {
   blendedCagr,
-  DEFAULT_INFLATION_PCT,
   formatINR,
   formatINRPlain,
   inflateTarget,
