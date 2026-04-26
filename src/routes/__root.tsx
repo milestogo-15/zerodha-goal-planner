@@ -1,8 +1,8 @@
 import { Link, Outlet, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
+import logoUrl from "@/assets/logo.avif";
 
 function NotFoundComponent() {
   return (
