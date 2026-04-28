@@ -401,8 +401,7 @@ function NewGoalPage() {
                 )}
               </div>
 
-              {/* Detailed Analysis (Monte Carlo) */}
-              <DetailedAnalysis result={result} years={years} />
+
 
               {/* Affordability */}
               {stretchStyle && (
@@ -466,6 +465,9 @@ function NewGoalPage() {
                   Allocation blocked — see the suggestion below.
                 </div>
               )}
+
+              {/* Detailed Analysis (Monte Carlo) */}
+              <DetailedAnalysis result={result} years={years} />
 
               {/* Smart suggestions */}
               {(result.notes.length > 0 ||
