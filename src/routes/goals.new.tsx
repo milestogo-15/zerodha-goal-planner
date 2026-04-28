@@ -466,6 +466,9 @@ function NewGoalPage() {
                 </div>
               )}
 
+              {/* Detailed Analysis (Monte Carlo) */}
+              <DetailedAnalysis result={result} years={years} />
+
               {/* Smart suggestions */}
               {(result.notes.length > 0 ||
                 result.revised_target ||
