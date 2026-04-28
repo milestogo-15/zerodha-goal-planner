@@ -1,205 +1,77 @@
-## Goal-aware allocation engine (Step 6 spec)
+## Add "See Detailed Analysis" Monte Carlo mode
 
-Today every preset returns a static bucket (`SHORT`/`MEDIUM`/`LONG`/`TAX`) and a fixed 7% inflation. The new spec makes allocation **salary + years + target aware** with per-goal inflation, stretch-ratio bands, allocation tilts, and corrective suggestions (revised target / revised years / step-up SIP).
+Keep the existing deterministic base tool exactly as it is. Add an opt-in detailed analysis layer that the user reveals by clicking a button in the goal preview / goal detail page. The detailed view runs a 1,000-run Monte Carlo simulation on top of the engine's allocation and shows a probability of success, a percentile range, and per-fund volatility notes.
 
-This plan replaces the static `preset.allocation()` call site with a new pure engine module, and rewires the "Add a goal" form + goal-detail page to surface the new outputs.
+### What the user sees
 
----
+On the **goal creation preview** (`goals.new.tsx`) and the **goal detail page** (`goals.$goalId.tsx`), below the existing projection card add a single collapsed CTA:
 
-### 1. New module: `src/lib/engine.ts` (the core)
-
-A single pure function `evaluateGoal(input) → result` that contains all the spec logic. Inputs and outputs match the JSON schema in Step 7.
-
-**Inputs**
-```ts
-type GoalKind =
-  | "emergency" | "vacation" | "home"
-  | "education" | "retirement" | "wealth" | "tax_saving";
-
-interface EngineInput {
-  kind: GoalKind;
-  target_today: number;
-  years: number;
-  monthly_income: number;
-  monthly_sip?: number | null;          // null → auto-calc required SIP
-  vacation_subtype?: "domestic" | "international";
-  existing_savings?: number;            // emergency only
-  largeCapFundId: string;               // for LONG bucket SENSEX/Nifty50 swap
-}
+```text
+[ See Detailed Analysis ▾ ]
+   "Stress-test this plan across 1,000 market scenarios"
 ```
 
-**Per-goal inflation table** (constants at top of file)
-| Kind | Inflation | Notes |
-|---|---|---|
-| education | 7% | CPI |
-| home | 8% | property |
-| vacation domestic | 7% | CPI |
-| vacation intl | 9% | INR depreciation |
-| wealth | 7% | CPI |
-| retirement | 7% | CPI |
-| emergency | none | living-expense buffer |
+When clicked, an inline panel expands and renders:
 
-**Bucket selection (goal-specific)**
-- **education**: <3 SHORT, 3–7 MEDIUM, >7 LONG; **special**: years ≤ 2 → force SHORT.
-- **home**: <3 SHORT, 3–7 MEDIUM, >7 LONG.
-- **vacation**: years ≤ 5 SHORT, 5–7 MEDIUM, >7 cap at MEDIUM (never LONG).
-- **wealth**: <3 MEDIUM (never SHORT), 3–7 MEDIUM, >7 LONG.
-- **retirement**: <3 SHORT, 3–7 MEDIUM, >7 LONG (fully dynamic, no overrides).
-- **emergency**: always SHORT regardless of years.
-- **tax_saving**: always TAX (only valid if years ≥ 3).
+1. **Probability of success** — large bold number with color (green ≥80%, amber 60-79%, red <60%) and short label ("Strong" / "Moderate — consider increasing SIP" / "At risk — review your plan").
+2. **Outcome range bar** — horizontal bar with 5 markers (p10 / p25 / p50 / p75 / p90) using friendly labels ("If markets are rough" / "Cautious" / "Most likely" / "Optimistic" / "If markets do well"). A dotted marker for the deterministic base projection. A vertical line labeled "Your goal" at the inflated target.
+3. **Volatility note** — one-line dynamic message based on bucket (SHORT/MEDIUM/LONG/TAX/EMERGENCY).
+4. **Per-fund behaviour notes** — small list showing each allocated fund and its one-line behaviour note.
 
-**Bucket allocations** (refined to match the spec exactly — current `presets.ts` is close, three small fixes)
-- SHORT: blended **6.6%** — ZOVER 30, ZLIQD 30, ZNSDG 20, ZGFOF 10, ZGOLD 10. (already correct)
-- MEDIUM: blended **9.3%** — ZMLTI 20, ZNH73 20 (we already use `largemid250-if`; rename label only), ZLTGC 15, ZGFOF 15, ZSFOF 15, ZSLVR 8, ZGOLD 7. (already correct)
-- LONG: blended **13.0%** — ZN250 20, ZE150 (we currently fold MidSmall400 into `mid150case`; keep as-is at 30), ZESML 10, ZNFTY 10, ZEN50 10, ZBSEN 8, ZE100 7, ZGOLD 5. (already correct)
-- TAX: ZELSS 100%.
-- **EMERGENCY** (new fixed allocation, distinct from SHORT): ZOVER 40, ZLIQD 40, ZNSDG 20 → blended **6.2%**. No equity/gold/silver. Spec says emergency uses this 3-fund mix, not the 5-fund SHORT mix.
+The base projection number, the deterministic SIP, allocations, stretch band, and all existing logic stay identical and untouched.
 
-**Stretch ratio**
-```
-required_SIP = inflated_target / FV_factor(years, blended_return)
-stretch      = required_SIP / monthly_income
-```
-Bands: EASY ≤0.10, MODERATE ≤0.20, STRETCHED ≤0.35, CRITICAL >0.35.
+### Files added / changed
 
-**Allocation tilt rules per goal** (mutates the bucket weights before returning)
-- **Education**:
-  - STRETCHED → shift 10% from lowest-CAGR fund in bucket to highest-CAGR fund. Add note.
-  - CRITICAL + years > 3 → recommend upgrading to next bucket (recompute with new bucket).
-  - CRITICAL + years ≤ 3 → emit `revised_target` = FV at 30% income SIP.
-- **Home**:
-  - STRETCHED + years ≥ 5 → +15% equity (shift from gold/debt sleeves into LargeMidcap/Nifty50). Add note.
-  - STRETCHED + years < 5 → emit `revised_years` where stretch ≤ 0.25 (binary search / closed form).
-  - CRITICAL → emit both `revised_target` (30% income) and `revised_years`.
-- **Vacation**:
-  - EASY → shift 10% Gold → Overnight/Liquid for max access.
-  - STRETCHED → emit `revised_target` (10% income) and `revised_years` (10% income).
-  - CRITICAL → block allocation (return `affordability_flag: "WARN"` with `allocation: []` and `revised_target`).
-- **Wealth**:
-  - EASY + LONG → +10% mid+small (shift from Nifty50/SENSEX sleeves).
-  - EASY + MEDIUM → add ZN250 10% sleeve (shift from lowest-return).
-  - STRETCHED → no equity bump; compute `step_up_corpus_10pct`.
-  - CRITICAL → emit `revised_years` where stretch = 0.25.
-  - Always compute `step_up_corpus_10pct` (10% annual SIP increase).
-  - `upgrade_to_long_suggested` = true when years ∈ {5,6} and stretch is EASY.
-- **Retirement**:
-  - Same EASY tilts as wealth based on years bracket.
-  - STRETCHED + years > 5 → emit `step_up_corpus_10pct`.
-  - STRETCHED + years ≤ 5 → hard flag in note.
-  - CRITICAL → realistic corpus at 25% income SIP.
-  - Always emit `glide_path_note` (4 brackets: <3, 3–5, 5–10, >10) and `monthly_withdrawal_estimate = projected_corpus × 0.06 / 12`.
-- **Emergency**:
-  - Allocation locked (the 3-fund EMERGENCY mix). No tilt logic.
-  - If user hasn't set a target, expose `suggested_targets = { conservative: income×3, recommended: income×6, aggressive: income×9 }`.
-  - `existing_savings_offset` reduces the SIP base: `remaining = recommended − existing_savings`.
+**NEW `src/lib/volatility.ts`** — pure module, no React.
+- Exports `FUND_VOLATILITY: Record<fundId, { mean: number; stdDev: number; class: "equity"|"debt"|"gold"|"silver"|"hybrid"; note: string }>` mapping every fund in `src/lib/funds.ts` to the spec's mean / std-dev table. Mapping for the funds we actually have:
+  - `overnight` 6.0/0.3, `liquidcase` 6.0/0.5, `gsec-short` 7.0/1.5, `gsec813` 7.5/5.0
+  - `goldcase` & `gold-fof` 8.0/12.0, `silvercase` & `silver-fof` 9.0/18.0
+  - `multi-asset` 10.5/7.0 (hybrid)
+  - `nifty50-if`, `niftycase`, `sensex-if` 12.0/14.0; `top100case` 12.0/14.0
+  - `largemid250-if`, `elss-largemid250` 13.0/16.0
+  - `mid150case` 14.0/20.0
+  - `smallcase` 15.0/25.0
+  - One behaviour-note string per fund (from spec's "Asset behaviour notes").
+- Exports `volatilityNote(bucket)` returning the dynamic bucket-level message.
 
-**Helper math** (already in `src/lib/calc.ts`, reuse + add)
-- Reuse `sipFutureValue`, `requiredSip`, `inflateTarget` (extend `inflateTarget` to accept any rate — already does).
-- Add `stepUpFutureValue(sip, ratePct, years, stepUpPct = 10)` summing `Σ FV(years−i, r) × (1.10)^i` per the spec.
-- Add `roundUpTo100(n)` and `roundTo100(n)` for the "ceiling SIP / nearest ₹100 corpus" rules in the validation section.
-- Add `solveYearsForStretch(target, monthlyIncome, blendedReturn, targetStretch)` — closed-form solve for years given desired SIP/income ratio.
+**NEW `src/lib/montecarlo.ts`** — pure module.
+- `simulateGoal({ allocation, monthlySip, years, inflatedTarget, runs = 1000, seed? }) → DetailedAnalysis`.
+- Implementation:
+  - Seeded PRNG (mulberry32) so results are stable across renders for the same inputs (no flicker on re-render).
+  - For each run and each year, draw a shared `equityShock ~ N(0,1)`, then per fund:
+    - equity: `r = mean + std × (0.7·shock + 0.3·N(0,1))`
+    - debt: `r = mean + std × (-0.1·shock + 1.0·N(0,1))`
+    - gold: `r = mean + std × (-0.2·shock + 0.98·N(0,1))`
+    - silver: gold path × 0.6 correlation (shared gold idiosyncratic factor), then add silver-specific noise.
+    - hybrid: treat as 0.5 equity-correlated, 0.5 idiosyncratic.
+  - Cap each annual return to `[-60%, +80%]`.
+  - For each fund sleeve, allocate `monthlySip × percent/100` and compound month-by-month using that year's monthly rate; carry corpus across years.
+  - Sum sleeve corpora → simulation total.
+  - After all runs: sort, return `{ p10, p25, p50, p75, p90, probabilityOfSuccess, runs }`.
+- `boxMullerNormal(rng)` helper for N(0,1) draws.
+- No React, no I/O; fully unit-testable.
 
-**Output** (mirrors Step 7 schema)
-```ts
-interface EngineResult {
-  goal_kind: GoalKind;
-  bucket: "SHORT" | "MEDIUM" | "LONG" | "TAX" | "EMERGENCY";
-  inflation_used: number | null;
-  inflated_target: number;
-  blended_return: number;          // pct
-  required_monthly_sip: number;
-  user_monthly_sip: number | null;
-  effective_monthly_sip: number;   // user || required, ceiling ₹100
-  projected_corpus: number;
-  surplus_or_deficit: number;
-  on_track: boolean;
-  stretch_ratio: number;
-  stretch_band: "EASY" | "MODERATE" | "STRETCHED" | "CRITICAL";
-  affordability_flag: "OK" | "FLAG" | "WARN";
-  allocation: AllocationItem[];    // post-tilt
-  notes: string[];                 // tilt explanations, glide path, etc.
-  // optional per goal kind
-  revised_target?: number;
-  revised_years?: number;
-  step_up_corpus_10pct?: number;
-  monthly_withdrawal_estimate?: number;
-  glide_path_note?: string;
-  upgrade_to_long_suggested?: boolean;
-  suggested_targets?: { conservative: number; recommended: number; aggressive: number };
-  existing_savings_offset?: number;
-}
-```
+**NEW `src/components/DetailedAnalysis.tsx`** — presentational.
+- Props: `EngineResult` + `monthlyIncome`. Internally calls `simulateGoal` (memoized via `useMemo` on `[allocation, sip, years, inflatedTarget]`).
+- Wrapped in shadcn `<Collapsible>` with a `<CollapsibleTrigger>` button "See Detailed Analysis". Default collapsed.
+- Renders: probability badge, range bar (simple flexbox with absolute-positioned markers — no chart lib needed), volatility note, per-fund behaviour list (uses `FUND_VOLATILITY` notes filtered to funds present in `result.allocation`).
+- Brief disclaimer: "Simulated outcomes based on historical asset volatility. Not a guarantee."
 
----
+**EDIT `src/routes/goals.new.tsx`** — render `<DetailedAnalysis result={result} monthlyIncome={income} />` directly under the existing "Live projection" card. No changes to existing fields, calculations, or layout.
 
-### 2. Map current preset IDs → engine `GoalKind`
+**EDIT `src/routes/goals.$goalId.tsx`** — render the same component below the existing projection / insights section, using the already-computed engine result.
 
-`src/lib/presets.ts` keeps presets for UI labels/icons but adds:
-```ts
-export const PRESET_TO_KIND: Record<GoalPresetId, GoalKind> = {
-  emergency: "emergency",
-  "short-park": "vacation",
-  "tax-saving": "tax_saving",
-  car: "home",          // car/down-payment shares Home logic
-  house: "home",
-  education: "education",
-  retirement: "retirement",
-  wealth: "wealth",
-  custom: "wealth",     // custom defaults to wealth rules
-};
-```
-Existing static `allocation` callbacks become unused but kept for backward compat with previously saved goals on the detail page (we'll prefer engine output when re-evaluating).
+### Technical details
 
----
+- **Determinism for UI**: use a seed derived from `(allocation hash, sip, years, target)` so re-renders don't reshuffle percentiles. Different goals → different seeds.
+- **Performance**: 1,000 runs × ~40 years × ~8 funds is well under 50ms in modern browsers; run synchronously inside `useMemo`. No web worker needed at this scale. If `years > 30` and we measure jank later, we can defer to `requestIdleCallback`.
+- **EMERGENCY / TAX edge cases**: simulate normally (TAX is a single ELSS sleeve; EMERGENCY is debt-only — narrow band confirms the "very stable" message).
+- **Empty allocation** (e.g. CRITICAL vacation returns `allocation: []`): the component renders a small "Detailed analysis unavailable — revise your goal first" message instead of running the sim.
+- **No engine changes**: the deterministic engine and its outputs remain byte-identical. Detailed analysis is a sibling computation that reads `result.allocation`, `result.effective_monthly_sip`, `result.inflated_target`, `result.bucket`, and the input `years`.
+- **No persistence changes**: simulation runs on demand, results are not stored.
 
-### 3. `src/routes/goals.new.tsx` — wire to the engine
+### Out of scope
 
-- Add form fields:
-  - **Vacation subtype** (radio: Domestic / International) — visible only when `presetId === "short-park"`.
-  - **Existing savings** (₹) — visible only when `presetId === "emergency"`.
-  - **Suggested targets chips** (3×: 3 / 6 / 9 months income) for emergency: clicking sets `targetAmount`.
-- Replace the local `inflationPct = 7` with `result.inflation_used` from the engine. Display:
-  - "7% (CPI)" for most, "8% (property)" for home, "9% (international travel)" / "7% (domestic)" for vacation, "Not applied" for emergency.
-  - Keep field read-only / muted as today; just dynamic per-goal.
-- Replace ad-hoc `cagr`, `reqSip`, `projected`, `onTrack` calculations with one `result = evaluateGoal({...})` call.
-- New live-preview cards on the right column:
-  1. **Live projection** (existing) — but values from `result.projected_corpus`, `result.effective_monthly_sip`, `result.blended_return`.
-  2. **Affordability** — new card. Shows stretch band as a colored chip (EASY=success, MODERATE=neutral, STRETCHED=warning, CRITICAL=destructive) + `stretch_ratio %` and one-line message.
-  3. **Suggested allocation** (existing) — driven by `result.allocation` (post-tilt).
-  4. **Smart suggestions** — new conditional card listing any of: revised_target, revised_years, step_up_corpus_10pct, glide_path_note, monthly_withdrawal_estimate, upgrade_to_long_suggested. Each entry is one row; revised_target/years come with "Apply" buttons that prefill the form.
-- Submit guards:
-  - Vacation CRITICAL → block save with toast pointing at the `revised_target`.
-  - Otherwise allow save; persist `result.allocation` and `result.effective_monthly_sip`.
-
-### 4. `src/routes/goals.$goalId.tsx` — re-evaluate on edits
-
-- On every render, call `evaluateGoal` with the current goal + settings. Use the returned `bucket`, `blended_return`, `notes`, `glide_path_note`, `monthly_withdrawal_estimate`, `step_up_corpus_10pct` to enrich the existing view:
-  - Status banner now shows stretch band + affordability message in addition to surplus/shortfall.
-  - New "Insights" section below the chart: glide path note (retirement), step-up corpus (wealth/retirement), withdrawal estimate (retirement), revised target/years (when not on-track).
-- Existing manual allocation editor stays — it lets users override the engine-suggested mix; engine is only re-run when target/years/SIP/preset changes.
-
-### 5. `src/routes/about.tsx` — update mapping page
-
-- Add an **Emergency Bucket** row to the existing bucket tables (3 funds: ZOVER 40 / ZLIQD 40 / ZNSDG 20 @ blended 6.2%).
-- Add a small "Inflation per goal" reference table (the summary at the bottom of the spec).
-- Keep "stocks-only mapping" rule from the prior turn — no extra prose.
-
-### 6. Round/ceiling rules (validation section of spec)
-
-- All projected corpus values rounded to nearest ₹100 → apply `roundTo100` at engine output boundary.
-- All required SIPs ceiling to nearest ₹100 → apply `roundUpTo100` at engine output.
-- Reject inputs with `years < 1`, `target ≤ 0`, `monthly_income ≤ 0` (form already validates years/target; add monthly_income > 0 guard with a friendly toast pointing at the income field).
-
-### 7. Files touched
-
-- **NEW** `src/lib/engine.ts` — pure engine, fully unit-testable, no React.
-- **EDIT** `src/lib/calc.ts` — add `stepUpFutureValue`, `roundTo100`, `roundUpTo100`, `solveYearsForStretch`.
-- **EDIT** `src/lib/presets.ts` — add `PRESET_TO_KIND` map, add EMERGENCY bucket constant. Keep existing static buckets for backward compat.
-- **EDIT** `src/routes/goals.new.tsx` — replace inline math with `evaluateGoal`, add vacation subtype + emergency fields + suggestion chips + smart-suggestions card.
-- **EDIT** `src/routes/goals.$goalId.tsx` — call `evaluateGoal`, surface notes/glide path/withdrawal/step-up/revised values in a new Insights card.
-- **EDIT** `src/routes/about.tsx` — add Emergency bucket table + per-goal inflation reference.
-
-### 8. Out of scope (deliberately)
-
-- No new persistence schema changes — `Goal` keeps the same shape (`presetId`, `targetAmount`, `years`, `monthlySip`, `allocation`). Vacation subtype + existing savings live only in the form (not persisted) for this iteration. If you want them persisted to drive the detail-page re-evaluation, say so and I'll add `kindMeta?: { vacationSubtype?, existingSavings? }` to `Goal`.
-- No automated tests — engine is pure and easy to add a test file for later if you want.
+- No changes to base SIP / inflation / bucket / stretch logic.
+- No new routes, no DB, no preset edits.
+- No charting library — the range bar is plain Tailwind divs.
