@@ -93,9 +93,49 @@ function GoalDetail() {
 
   const totalPct = goal.allocation.reduce((s, a) => s + a.percent, 0);
 
-  const updateAllocation = (fundId: string, percent: number) => {
-    const next = goal.allocation.map((a) => (a.fundId === fundId ? { ...a, percent } : a));
-    updateGoal(goal.id, { allocation: next });
+  const updateAllocation = (fundId: string, nextPercent: number) => {
+    const current = goal.allocation;
+    if (current.length === 1) {
+      updateGoal(goal.id, { allocation: [{ ...current[0], percent: 100 }] });
+      return;
+    }
+
+    const target = Math.max(0, Math.min(100, Math.round(nextPercent)));
+    const others = current.filter((a) => a.fundId !== fundId);
+    const othersTotal = others.reduce((s, a) => s + a.percent, 0);
+    const remaining = 100 - target;
+
+    let nextOthers: typeof others;
+    if (othersTotal <= 0) {
+      const base = Math.floor(remaining / others.length);
+      nextOthers = others.map((a) => ({ ...a, percent: base }));
+    } else {
+      nextOthers = others.map((a) => ({
+        ...a,
+        percent: Math.max(0, Math.round((a.percent / othersTotal) * remaining)),
+      }));
+    }
+
+    const built = current.map((a) =>
+      a.fundId === fundId
+        ? { ...a, percent: target }
+        : nextOthers.find((n) => n.fundId === a.fundId)!,
+    );
+    const drift = 100 - built.reduce((s, a) => s + a.percent, 0);
+    if (drift !== 0) {
+      const candidates = built
+        .filter((a) => a.fundId !== fundId)
+        .sort((x, y) => y.percent - x.percent);
+      for (const c of candidates) {
+        const adjusted = c.percent + drift;
+        if (adjusted >= 0 && adjusted <= 100) {
+          c.percent = adjusted;
+          break;
+        }
+      }
+    }
+
+    updateGoal(goal.id, { allocation: built });
   };
 
   const removeFund = (fundId: string) => {
