@@ -1,77 +1,79 @@
-## Add "See Detailed Analysis" Monte Carlo mode
+## Goal
+On the goal detail page (`/goals/:goalId`), the **Recommended allocation** section currently lets the user drag a slider for one fund at a time, but the other funds stay fixed — so the total drifts away from 100% and the user has to manually rebalance. Make sliders auto-rebalance: when the user changes one fund's percent, the remaining funds adjust proportionally so the total stays at 100%.
 
-Keep the existing deterministic base tool exactly as it is. Add an opt-in detailed analysis layer that the user reveals by clicking a button in the goal preview / goal detail page. The detailed view runs a 1,000-run Monte Carlo simulation on top of the engine's allocation and shows a probability of success, a percentile range, and per-fund volatility notes.
+## Behavior
 
-### What the user sees
+- User drags fund A's slider from 20% → 30% (delta = +10%).
+- The remaining 10% has to come out of the other funds (B, C, D…).
+- Each other fund shrinks **in proportion to its current weight** among the "other" funds. If B was 40 of the remaining 80 (50%), it gives up 5%; if C was 24 of 80 (30%), it gives up 3%; etc.
+- If the dragged fund is increased and the others' total is 0 (edge case), clamp the dragged fund to whatever room is available.
+- All percentages stay as integers (sliders use `step={1}`); after proportional scaling, round and fix any ±1% drift by adjusting the largest "other" fund so the total is exactly 100.
+- Lower-bound: no fund can go below 0%. If proportional reduction would push a fund negative, clamp it at 0 and redistribute the residual across the remaining non-zero funds (single re-pass is enough in practice).
+- Upper-bound: the dragged fund itself is capped at 100% (already enforced by slider max).
+- Single-fund case: if there's only one fund in the allocation, the slider just snaps it to 100%.
 
-On the **goal creation preview** (`goals.new.tsx`) and the **goal detail page** (`goals.$goalId.tsx`), below the existing projection card add a single collapsed CTA:
+The "totals should sum to 100% (X% currently)" helper text becomes redundant once rebalancing is automatic — replace it with a calmer hint like *"Adjust any slider — the others rebalance automatically."* The total badge still renders (useful as confirmation it's exactly 100%).
 
-```text
-[ See Detailed Analysis ▾ ]
-   "Stress-test this plan across 1,000 market scenarios"
+## Technical changes — `src/routes/goals.$goalId.tsx`
+
+Replace the existing `updateAllocation` (line 96–99) with a rebalancing version:
+
+```ts
+const updateAllocation = (fundId: string, nextPercent: number) => {
+  const current = goal.allocation;
+  if (current.length === 1) {
+    updateGoal(goal.id, { allocation: [{ ...current[0], percent: 100 }] });
+    return;
+  }
+
+  const target = Math.max(0, Math.min(100, Math.round(nextPercent)));
+  const others = current.filter((a) => a.fundId !== fundId);
+  const othersTotal = others.reduce((s, a) => s + a.percent, 0);
+  const remaining = 100 - target;
+
+  let nextOthers: typeof others;
+  if (othersTotal <= 0) {
+    // Distribute `remaining` evenly across the other funds.
+    const base = Math.floor(remaining / others.length);
+    nextOthers = others.map((a) => ({ ...a, percent: base }));
+  } else {
+    // Proportional scaling.
+    nextOthers = others.map((a) => ({
+      ...a,
+      percent: Math.max(0, Math.round((a.percent / othersTotal) * remaining)),
+    }));
+  }
+
+  // Reconcile rounding so the total is exactly 100.
+  const built = current.map((a) =>
+    a.fundId === fundId
+      ? { ...a, percent: target }
+      : nextOthers.find((n) => n.fundId === a.fundId)!,
+  );
+  const drift = 100 - built.reduce((s, a) => s + a.percent, 0);
+  if (drift !== 0) {
+    // Apply drift to the largest "other" fund that can absorb it without going <0 or >100.
+    const candidates = built
+      .filter((a) => a.fundId !== fundId)
+      .sort((x, y) => y.percent - x.percent);
+    for (const c of candidates) {
+      const adjusted = c.percent + drift;
+      if (adjusted >= 0 && adjusted <= 100) {
+        c.percent = adjusted;
+        break;
+      }
+    }
+  }
+
+  updateGoal(goal.id, { allocation: built });
+};
 ```
 
-When clicked, an inline panel expands and renders:
+Also update the helper line (around line 455) from *"Edit percentages — totals should sum to 100% (X% currently)."* to *"Drag any slider — the others rebalance automatically. Total: X%."*
 
-1. **Probability of success** — large bold number with color (green ≥80%, amber 60-79%, red <60%) and short label ("Strong" / "Moderate — consider increasing SIP" / "At risk — review your plan").
-2. **Outcome range bar** — horizontal bar with 5 markers (p10 / p25 / p50 / p75 / p90) using friendly labels ("If markets are rough" / "Cautious" / "Most likely" / "Optimistic" / "If markets do well"). A dotted marker for the deterministic base projection. A vertical line labeled "Your goal" at the inflated target.
-3. **Volatility note** — one-line dynamic message based on bucket (SHORT/MEDIUM/LONG/TAX/EMERGENCY).
-4. **Per-fund behaviour notes** — small list showing each allocated fund and its one-line behaviour note.
+No other files change. The slider component, store, and projection math already accept the updated allocation array as-is.
 
-The base projection number, the deterministic SIP, allocations, stretch band, and all existing logic stay identical and untouched.
+## Out of scope
 
-### Files added / changed
-
-**NEW `src/lib/volatility.ts`** — pure module, no React.
-- Exports `FUND_VOLATILITY: Record<fundId, { mean: number; stdDev: number; class: "equity"|"debt"|"gold"|"silver"|"hybrid"; note: string }>` mapping every fund in `src/lib/funds.ts` to the spec's mean / std-dev table. Mapping for the funds we actually have:
-  - `overnight` 6.0/0.3, `liquidcase` 6.0/0.5, `gsec-short` 7.0/1.5, `gsec813` 7.5/5.0
-  - `goldcase` & `gold-fof` 8.0/12.0, `silvercase` & `silver-fof` 9.0/18.0
-  - `multi-asset` 10.5/7.0 (hybrid)
-  - `nifty50-if`, `niftycase`, `sensex-if` 12.0/14.0; `top100case` 12.0/14.0
-  - `largemid250-if`, `elss-largemid250` 13.0/16.0
-  - `mid150case` 14.0/20.0
-  - `smallcase` 15.0/25.0
-  - One behaviour-note string per fund (from spec's "Asset behaviour notes").
-- Exports `volatilityNote(bucket)` returning the dynamic bucket-level message.
-
-**NEW `src/lib/montecarlo.ts`** — pure module.
-- `simulateGoal({ allocation, monthlySip, years, inflatedTarget, runs = 1000, seed? }) → DetailedAnalysis`.
-- Implementation:
-  - Seeded PRNG (mulberry32) so results are stable across renders for the same inputs (no flicker on re-render).
-  - For each run and each year, draw a shared `equityShock ~ N(0,1)`, then per fund:
-    - equity: `r = mean + std × (0.7·shock + 0.3·N(0,1))`
-    - debt: `r = mean + std × (-0.1·shock + 1.0·N(0,1))`
-    - gold: `r = mean + std × (-0.2·shock + 0.98·N(0,1))`
-    - silver: gold path × 0.6 correlation (shared gold idiosyncratic factor), then add silver-specific noise.
-    - hybrid: treat as 0.5 equity-correlated, 0.5 idiosyncratic.
-  - Cap each annual return to `[-60%, +80%]`.
-  - For each fund sleeve, allocate `monthlySip × percent/100` and compound month-by-month using that year's monthly rate; carry corpus across years.
-  - Sum sleeve corpora → simulation total.
-  - After all runs: sort, return `{ p10, p25, p50, p75, p90, probabilityOfSuccess, runs }`.
-- `boxMullerNormal(rng)` helper for N(0,1) draws.
-- No React, no I/O; fully unit-testable.
-
-**NEW `src/components/DetailedAnalysis.tsx`** — presentational.
-- Props: `EngineResult` + `monthlyIncome`. Internally calls `simulateGoal` (memoized via `useMemo` on `[allocation, sip, years, inflatedTarget]`).
-- Wrapped in shadcn `<Collapsible>` with a `<CollapsibleTrigger>` button "See Detailed Analysis". Default collapsed.
-- Renders: probability badge, range bar (simple flexbox with absolute-positioned markers — no chart lib needed), volatility note, per-fund behaviour list (uses `FUND_VOLATILITY` notes filtered to funds present in `result.allocation`).
-- Brief disclaimer: "Simulated outcomes based on historical asset volatility. Not a guarantee."
-
-**EDIT `src/routes/goals.new.tsx`** — render `<DetailedAnalysis result={result} monthlyIncome={income} />` directly under the existing "Live projection" card. No changes to existing fields, calculations, or layout.
-
-**EDIT `src/routes/goals.$goalId.tsx`** — render the same component below the existing projection / insights section, using the already-computed engine result.
-
-### Technical details
-
-- **Determinism for UI**: use a seed derived from `(allocation hash, sip, years, target)` so re-renders don't reshuffle percentiles. Different goals → different seeds.
-- **Performance**: 1,000 runs × ~40 years × ~8 funds is well under 50ms in modern browsers; run synchronously inside `useMemo`. No web worker needed at this scale. If `years > 30` and we measure jank later, we can defer to `requestIdleCallback`.
-- **EMERGENCY / TAX edge cases**: simulate normally (TAX is a single ELSS sleeve; EMERGENCY is debt-only — narrow band confirms the "very stable" message).
-- **Empty allocation** (e.g. CRITICAL vacation returns `allocation: []`): the component renders a small "Detailed analysis unavailable — revise your goal first" message instead of running the sim.
-- **No engine changes**: the deterministic engine and its outputs remain byte-identical. Detailed analysis is a sibling computation that reads `result.allocation`, `result.effective_monthly_sip`, `result.inflated_target`, `result.bucket`, and the input `years`.
-- **No persistence changes**: simulation runs on demand, results are not stored.
-
-### Out of scope
-
-- No changes to base SIP / inflation / bucket / stretch logic.
-- No new routes, no DB, no preset edits.
-- No charting library — the range bar is plain Tailwind divs.
+- The read-only "Suggested allocation" preview on `/goals/new` stays unchanged — it's a preview, not editable.
+- No change to fund add/remove flow. (Newly-added funds default to 5% via the existing `addFund` and will simply make the total drift on insert; that's existing behavior and the helper text still reports the live total.)
