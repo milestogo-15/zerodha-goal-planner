@@ -77,11 +77,6 @@ function Dashboard() {
       <section className="mb-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Your goals</h2>
-          <Button asChild className="rounded-full">
-            <Link to="/goals/new">
-              <Plus className="h-4 w-4" /> Add goal
-            </Link>
-          </Button>
         </div>
 
         {goals.length === 0 ? (
