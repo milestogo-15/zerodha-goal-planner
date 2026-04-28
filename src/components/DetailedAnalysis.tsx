@@ -18,13 +18,17 @@ interface Props {
 }
 
 function probTone(p: number): { color: string; label: string } {
-  if (p >= 0.8) return { color: "text-emerald-600 dark:text-emerald-400", label: "Strong" };
+  if (p >= 0.8)
+    return { color: "text-emerald-600 dark:text-emerald-400", label: "Strong likelihood of success" };
   if (p >= 0.6)
     return {
-      color: "text-amber-600 dark:text-amber-400",
-      label: "Moderate — consider increasing SIP",
+      color: "text-foreground",
+      label: "Reasonable chance — staying consistent helps",
     };
-  return { color: "text-red-600 dark:text-red-400", label: "At risk — review your plan" };
+  return {
+    color: "text-foreground",
+    label: "Markets vary year to year — your SIP is designed to ride this out",
+  };
 }
 
 const FRIENDLY = {
@@ -119,12 +123,13 @@ export function DetailedAnalysis({ result, years }: Props) {
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     Outcome range across 1,000 simulations
                   </p>
-                  <div className="relative mt-6 mb-12 h-2 rounded-full bg-gradient-to-r from-red-200 via-amber-200 to-emerald-200 dark:from-red-950 dark:via-amber-950 dark:to-emerald-950">
+                  <div className="relative mt-6 mb-16 h-2 rounded-full bg-gradient-to-r from-amber-200/70 via-amber-100 to-emerald-200 dark:from-amber-950 dark:via-amber-900/40 dark:to-emerald-950 mx-12">
                     {/* percentile dots */}
                     {(["p10", "p25", "p50", "p75", "p90"] as const).map((k) => {
                       const v = sim[k];
                       const left = bar.pos(v);
                       const isMedian = k === "p50";
+                      const isEdge = k === "p10" || k === "p90";
                       return (
                         <div
                           key={k}
@@ -136,7 +141,15 @@ export function DetailedAnalysis({ result, years }: Props) {
                               isMedian ? "h-4 w-4 bg-primary" : "h-3 w-3 bg-foreground/70"
                             }`}
                           />
-                          <p className="absolute left-1/2 top-5 w-24 -translate-x-1/2 text-center text-[10px] leading-tight text-muted-foreground">
+                          <p
+                            className={`absolute top-5 w-24 text-[10px] leading-tight text-muted-foreground ${
+                              isEdge && k === "p10"
+                                ? "left-0 text-left"
+                                : isEdge && k === "p90"
+                                  ? "right-0 text-right"
+                                  : "left-1/2 -translate-x-1/2 text-center"
+                            }`}
+                          >
                             {FRIENDLY[k]}
                             <br />
                             <span className="font-semibold text-foreground">{formatINR(v)}</span>
