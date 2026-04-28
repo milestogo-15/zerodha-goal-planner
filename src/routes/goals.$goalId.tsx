@@ -35,6 +35,7 @@ import {
   sipFutureValue,
 } from "@/lib/calc";
 import { evaluateGoal } from "@/lib/engine";
+import { DetailedAnalysis } from "@/components/DetailedAnalysis";
 
 export const Route = createFileRoute("/goals/$goalId")({
   component: GoalDetail,
@@ -301,6 +302,11 @@ function GoalDetail() {
           </ul>
         </div>
       )}
+
+      {/* Detailed Analysis (Monte Carlo) */}
+      <div className="mt-4">
+        <DetailedAnalysis result={engine} years={goal.years} />
+      </div>
 
       {/* Edit basics */}
       <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
