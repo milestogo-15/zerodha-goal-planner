@@ -492,7 +492,7 @@ function GoalDetail() {
           <div>
             <h2 className="text-lg font-semibold">Recommended allocation</h2>
             <p className="text-sm text-muted-foreground">
-              Edit percentages — totals should sum to 100% ({totalPct}% currently).
+              Drag any slider — the others rebalance automatically. Total: {totalPct}%.
             </p>
           </div>
           <LargeCapToggle />
