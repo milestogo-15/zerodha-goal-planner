@@ -133,6 +133,9 @@ function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-border/60 bg-surface">
       <div className="mx-auto max-w-6xl px-4 py-8 text-xs leading-relaxed text-muted-foreground md:px-6">
+        <p className="mb-3 rounded-md border border-border/60 bg-background px-3 py-2 text-[11px] font-medium text-foreground/80">
+          Note: This is an independent personal project for educational purposes. It is not affiliated with, endorsed by, or associated with Zerodha Fund House / Zerodha AMC.
+        </p>
         <p className="font-semibold text-foreground/80">Educational tool — not investment advice.</p>
         <p className="mt-1">
           Allocations and projections use historical-average return assumptions and are
