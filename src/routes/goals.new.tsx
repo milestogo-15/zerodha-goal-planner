@@ -401,8 +401,7 @@ function NewGoalPage() {
                 )}
               </div>
 
-              {/* Detailed Analysis (Monte Carlo) */}
-              <DetailedAnalysis result={result} years={years} />
+
 
               {/* Affordability */}
               {stretchStyle && (
