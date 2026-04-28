@@ -35,6 +35,7 @@ import {
   sipFutureValue,
 } from "@/lib/calc";
 import { evaluateGoal } from "@/lib/engine";
+import { DetailedAnalysis } from "@/components/DetailedAnalysis";
 
 export const Route = createFileRoute("/goals/$goalId")({
   component: GoalDetail,

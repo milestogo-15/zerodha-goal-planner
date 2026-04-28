@@ -18,6 +18,7 @@ import { PRESETS, presetById, PRESET_TO_KIND, type GoalPresetId } from "@/lib/pr
 import { fundById } from "@/lib/funds";
 import { evaluateGoal, type EngineResult } from "@/lib/engine";
 import { formatINR, formatINRPlain } from "@/lib/calc";
+import { DetailedAnalysis } from "@/components/DetailedAnalysis";
 
 export const Route = createFileRoute("/goals/new")({
   component: NewGoalPage,
@@ -399,6 +400,9 @@ function NewGoalPage() {
                   </p>
                 )}
               </div>
+
+              {/* Detailed Analysis (Monte Carlo) */}
+              <DetailedAnalysis result={result} years={years} />
 
               {/* Affordability */}
               {stretchStyle && (
