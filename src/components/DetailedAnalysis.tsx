@@ -123,13 +123,15 @@ export function DetailedAnalysis({ result, years }: Props) {
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     Outcome range across 1,000 simulations
                   </p>
-                  <div className="relative mt-6 mb-16 h-2 rounded-full bg-gradient-to-r from-amber-200/70 via-amber-100 to-emerald-200 dark:from-amber-950 dark:via-amber-900/40 dark:to-emerald-950 mx-12">
+                  <div className="relative mt-8 mb-20 h-2 rounded-full bg-gradient-to-r from-amber-200/70 via-amber-100 to-emerald-200 dark:from-amber-950 dark:via-amber-900/40 dark:to-emerald-950 mx-12">
                     {/* percentile dots */}
-                    {(["p10", "p25", "p50", "p75", "p90"] as const).map((k) => {
+                    {(["p10", "p25", "p50", "p75", "p90"] as const).map((k, idx) => {
                       const v = sim[k];
                       const left = bar.pos(v);
                       const isMedian = k === "p50";
                       const isEdge = k === "p10" || k === "p90";
+                      // Alternate label vertical offset to avoid overlap
+                      const stagger = idx % 2 === 0 ? "top-5" : "top-12";
                       return (
                         <div
                           key={k}
@@ -142,7 +144,7 @@ export function DetailedAnalysis({ result, years }: Props) {
                             }`}
                           />
                           <p
-                            className={`absolute top-5 w-24 text-[10px] leading-tight text-muted-foreground ${
+                            className={`absolute ${stagger} w-20 text-[10px] leading-tight text-muted-foreground ${
                               isEdge && k === "p10"
                                 ? "left-0 text-left"
                                 : isEdge && k === "p90"
