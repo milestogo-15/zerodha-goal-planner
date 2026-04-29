@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { formatINR } from "@/lib/calc";
 import type { EngineResult } from "@/lib/engine";
 import { simulateGoal } from "@/lib/montecarlo";
@@ -40,7 +37,7 @@ const FRIENDLY = {
 } as const;
 
 export function DetailedAnalysis({ result, years }: Props) {
-  const [open, setOpen] = useState(false);
+  const [detailed, setDetailed] = useState(false);
 
   const sim = useMemo(() => {
     if (!result.allocation || result.allocation.length === 0) return null;
@@ -73,51 +70,62 @@ export function DetailedAnalysis({ result, years }: Props) {
 
   return (
     <Card className="border-dashed">
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
-          >
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">See Detailed Analysis</p>
-                <p className="text-xs text-muted-foreground">
-                  Stress-test this plan across 1,000 market scenarios
-                </p>
-              </div>
-            </div>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${
-                open ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="space-y-6 border-t pt-5">
-            {!sim || !bar ? (
-              <p className="text-sm text-muted-foreground">
-                Detailed analysis is unavailable — revise your goal first.
-              </p>
-            ) : (
-              <>
-                {/* Probability */}
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Probability of hitting your goal
-                  </p>
-                  <p
-                    className={`mt-1 text-4xl font-bold ${probTone(sim.probabilityOfSuccess).color}`}
-                  >
-                    {Math.round(sim.probabilityOfSuccess * 100)}%
-                  </p>
-                  <p className={`text-sm font-medium ${probTone(sim.probabilityOfSuccess).color}`}>
-                    {probTone(sim.probabilityOfSuccess).label}
-                  </p>
-                </div>
+      {/* Toggle header */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <div>
+            <p className="text-sm font-semibold">
+              {detailed ? "Detailed analysis" : "Quick analysis"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {detailed
+                ? "Full stress-test across 1,000 market scenarios"
+                : "A quick read on how this plan should behave"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="detailed-toggle" className="text-xs text-muted-foreground">
+            Detailed
+          </Label>
+          <Switch
+            id="detailed-toggle"
+            checked={detailed}
+            onCheckedChange={setDetailed}
+          />
+        </div>
+      </div>
 
+      <CardContent className="space-y-6 border-t pt-5">
+        {!sim || !bar ? (
+          <p className="text-sm text-muted-foreground">
+            Analysis is unavailable — revise your goal first.
+          </p>
+        ) : (
+          <>
+            {/* Probability — always shown */}
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Probability of hitting your goal
+              </p>
+              <p
+                className={`mt-1 text-4xl font-bold ${probTone(sim.probabilityOfSuccess).color}`}
+              >
+                {Math.round(sim.probabilityOfSuccess * 100)}%
+              </p>
+              <p className={`text-sm font-medium ${probTone(sim.probabilityOfSuccess).color}`}>
+                {probTone(sim.probabilityOfSuccess).label}
+              </p>
+            </div>
+
+            {/* Volatility note — always shown */}
+            <div className="rounded-md bg-muted/50 p-3">
+              <p className="text-sm">{volatilityNoteForBucket(result.bucket)}</p>
+            </div>
+
+            {detailed && (
+              <>
                 {/* Outcome range */}
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -130,7 +138,6 @@ export function DetailedAnalysis({ result, years }: Props) {
                       const left = bar.pos(v);
                       const isMedian = k === "p50";
                       const isEdge = k === "p10" || k === "p90";
-                      // Alternate label vertical offset to avoid overlap
                       const stagger = idx % 2 === 0 ? "top-5" : "top-12";
                       return (
                         <div
@@ -177,11 +184,6 @@ export function DetailedAnalysis({ result, years }: Props) {
                   </div>
                 </div>
 
-                {/* Volatility note */}
-                <div className="rounded-md bg-muted/50 p-3">
-                  <p className="text-sm">{volatilityNoteForBucket(result.bucket)}</p>
-                </div>
-
                 {/* Per-fund behaviour */}
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -207,9 +209,9 @@ export function DetailedAnalysis({ result, years }: Props) {
                 </p>
               </>
             )}
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
+          </>
+        )}
+      </CardContent>
     </Card>
   );
 }
